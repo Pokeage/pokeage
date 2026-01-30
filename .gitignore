@@ -1,0 +1,25 @@
+# rust / anchor
+/target
+**/target
+.anchor
+test-ledger
+*.rs.bk
+
+# node / typescript
+node_modules
+dist
+sdk/dist
+*.tsbuildinfo
+coverage
+
+# solana keys (never commit)
+*.json.key
+**/keypair*.json
+!programs/pokeage/idl/*.json
+
+# env and local
+.env
+.env.*
+!.env.example
+.DS_Store
+*.log
