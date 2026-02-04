@@ -1,0 +1,46 @@
+# pokeage on-chain workspace. shared dep versions live here so the program and
+# the cli agree on a single solana + anchor toolchain.
+[workspace]
+resolver = "2"
+members = ["cli", "programs/pokeage"]
+# the anchor program builds with the sbf toolchain, not a host cargo build, so
+# default host builds target the cli only. build the program with anchor.
+default-members = ["cli"]
+
+[workspace.package]
+version = "0.4.1"
+edition = "2021"
+authors = ["pokeAge core"]
+license = "MIT"
+repository = "https://github.com/Pokeage/pokeage"
+homepage = "https://github.com/Pokeage/pokeage"
+readme = "README.md"
+rust-version = "1.78"
+description = "On-chain $PAGE economy for the pokeAge monster-RPG: token sinks, NFT mint gating, marketplace escrow, and a fail-closed buyback pool."
+keywords = ["solana", "anchor", "gamefi", "token-2022", "web3"]
+categories = ["cryptography::cryptocurrencies", "games"]
+
+# solana is pinned with = so transitive resolution cannot drift off the anchor
+# 0.30.1 compatible patch. borsh tracks the anchor 0.30 stack (0.10), not 1.x.
+[workspace.dependencies]
+solana-client = "=1.18.26"
+solana-sdk = "=1.18.26"
+solana-program = "=1.18.26"
+anchor-lang = "0.30.1"
+anchor-spl = "0.30.1"
+clap = { version = "4.5", features = ["derive"] }
+tokio = { version = "1.39", features = ["macros", "rt-multi-thread"] }
+serde = { version = "1", features = ["derive"] }
+borsh = "0.10"
+thiserror = "1"
+
+[profile.release]
+overflow-checks = true
+lto = "fat"
+codegen-units = 1
+opt-level = 3
+
+[profile.release.build-override]
+opt-level = 3
+incremental = false
+codegen-units = 1
