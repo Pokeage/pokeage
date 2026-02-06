@@ -1,0 +1,7 @@
+# stable channel: the solana 1.18 dep tree pulls a transitive crate that needs a
+# recent edition, so a 1.78 pin cannot resolve. msrv intent is still 1.78 (see
+# Cargo.toml rust-version); the build toolchain just has to be current stable.
+[toolchain]
+channel = "stable"
+components = ["rustfmt", "clippy"]
+profile = "minimal"
