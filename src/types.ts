@@ -78,3 +78,84 @@ export interface MonsterInstance {
   xp: number;
   /** evolution stage relative to the base species (0..2). */
   stage: number;
+  stats: Stats;
+  currentHP: number;
+  /** stat targets at Lv50 used by the linear growth model. */
+  targetStats: Stats;
+  ev1?: number | null;
+  ev2?: number | null;
+  rarity?: Rarity;
+  rarityTier?: RarityTier;
+  /** bond/affection counter, 0..AFFECTION_MAX. */
+  affection: number;
+  /** cached move list for battle (filled lazily). */
+  moves?: Move[];
+}
+
+/** An attacking move. power 0 means a status move (skipped by the AI picker). */
+export interface Move {
+  id: number;
+  name: string;
+  type: MonsterType;
+  power: number;
+  acc: number;
+  pp: number;
+  status: string | null;
+  effChance: number;
+  crit: boolean;
+  multi: boolean;
+}
+
+/** One resolved action inside a battle, enough to drive a UI replay. */
+export interface BattleEvent {
+  who: 'me' | 'foe';
+  atkName: string;
+  move: string;
+  moveType?: MonsterType;
+  dmg: number;
+  typeMod: number;
+  crit?: boolean;
+  miss?: boolean;
+  status?: string | null;
+  myHP: number;
+  foeHP: number;
+}
+
+/** Outcome of a single 1v1 fight. */
+export interface BattleResult {
+  won: boolean;
+  myHP: number;
+  foeHP: number;
+  turnsUsed: number;
+  events: BattleEvent[];
+}
+
+/** A gym leader and the badge it grants. */
+export interface Gym {
+  leader: string;
+  type: MonsterType;
+  badge: string;
+  team: GymEntry[];
+  /** gym ordering, used to gate progression. */
+  order: number;
+}
+
+export interface GymEntry {
+  monsterId: number;
+  level: number;
+}
+
+/** A town node: optional gym, the routes it exposes, and the next node. */
+export interface Town {
+  id: string;
+  name: string;
+  desc?: string;
+  gym?: Gym;
+  routes: string[];
+  nextTown: string | null;
+  /** badge required to enter (null for the starting town). */
+  requiredBadge: string | null;
+  /** whether a heal center is available here. */
+  center?: boolean;
+}
+
