@@ -159,3 +159,84 @@ export interface Town {
   center?: boolean;
 }
 
+/** A wild route: encounter pool, rare pool, level band, and encounter rate. */
+export interface Route {
+  id: string;
+  name: string;
+  levelRange: [number, number];
+  wildPool: number[];
+  rarePool: number[];
+  encounterRate: number;
+}
+
+/** A trainer: the player or an AI opponent. */
+export interface Trainer {
+  id: string;
+  name: string;
+  team: MonsterInstance[];
+  box: MonsterInstance[];
+  badges: string[];
+  location: string;
+  items: TrainerItems;
+  totalBattles: number;
+  totalCaught: number;
+  strategy?: Strategy;
+}
+
+/** Consumable counts. ball is the basic catch item. */
+export interface TrainerItems {
+  ball: number;
+  [key: string]: number;
+}
+
+/** Autonomous-loop tuning flags. All optional, all default to "on". */
+export interface Strategy {
+  autoHeal?: boolean;
+  autoGym?: boolean;
+  autoMove?: boolean;
+  catchEnabled?: boolean;
+  prioritizeRare?: boolean;
+  catchTypes?: Partial<Record<MonsterType, boolean>>;
+}
+
+/** Result of a wild-encounter step (used by the engine tick). */
+export interface EncounterResult {
+  encountered: boolean;
+  wild?: MonsterInstance;
+  won?: boolean;
+  caught?: boolean;
+  xpGained?: number;
+  events: BattleEvent[];
+  log: string[];
+}
+
+/** Result of one catch throw. */
+export interface CatchResult {
+  caught: boolean;
+  ballsUsed: number;
+  rate: number;
+}
+
+/** What a single engine tick produced, for telemetry and replay. */
+export interface TickResult {
+  state: AgentState;
+  action:
+    | 'hunt'
+    | 'gym'
+    | 'move'
+    | 'heal'
+    | 'idle'
+    | 'caught'
+    | 'evolve'
+    | 'levelup';
+  detail?: string;
+  encounter?: EncounterResult;
+}
+
+export type AgentState =
+  | 'idle'
+  | 'hunting'
+  | 'battling'
+  | 'gym'
+  | 'moving'
+  | 'healing';
