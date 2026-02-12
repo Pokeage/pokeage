@@ -58,3 +58,63 @@ type Rarity_ = 'common' | 'rare' | 'legendary';
 export const POWER_LEVEL_WEIGHT = 3;
 export const POWER_RARITY_BONUS: Record<Rarity_, number> = {
   common: 0,
+  rare: 100,
+  legendary: 200,
+};
+
+// ── Affection / bond ────────────────────────────────────────
+export const AFFECTION_MAX = 100;
+/** base gain per win, scaled by foe/own level ratio. */
+export const AFFECTION_BASE = 0.5;
+export const AFFECTION_MIN_GAIN = 0.1;
+export const AFFECTION_MAX_GAIN = 2.0;
+
+// ── Offline progression ─────────────────────────────────────
+export const MAX_OFFLINE_HOURS = 24;
+export const TICK_MS = 15000;
+export const HEAL_TICK_MS = 4000;
+
+// ── XP rewards ──────────────────────────────────────────────
+/** rookie catch-up multipliers, by lead level band. */
+export const ROOKIE_MULT_UNDER_30 = 4;
+export const ROOKIE_MULT_UNDER_45 = 2.5;
+export const ROOKIE_MULT_DEFAULT = 1.8;
+
+// ── Team / box ──────────────────────────────────────────────
+export const PARTY_SIZE = 4;
+export const BOX_SIZE = 6;
+export const SAME_TYPE_LIMIT = 2;
+
+// ── $PAGE token economy (matches programs/pokeage/src/constants.rs) ─
+/** token decimals (pump.fun Token-2022). */
+export const POKEAGE_DECIMALS = 6;
+const U = (n: number) => n * 10 ** POKEAGE_DECIMALS;
+
+/** burn sinks, in whole $PAGE. */
+export const COST_DEPLOY = U(1_000);
+export const COST_CATCH_COMMON = U(10);
+export const COST_CATCH_RARE = U(100);
+export const COST_CATCH_LEGENDARY = U(1_000);
+export const COST_GYM = U(50);
+export const COST_FORCE_EVOLVE = U(75_000);
+
+/** sink split: 70% burned, 30% to the buyback pool. */
+export const BURN_BPS = 7000;
+export const POOL_BPS = 3000;
+export const BPS_DENOM = 10_000;
+
+/** marketplace trade fee and its internal split. */
+export const MARKET_FEE_BPS = 500;
+export const MARKET_POOL_SHARE_BPS = 6000;
+export const MARKET_BURN_SHARE_BPS = 4000;
+
+/** instant sell pays floor * 50%. */
+export const INSTANT_SELL_BPS = 5000;
+
+/** listing fee in lamports (0.001 SOL). */
+export const LISTING_FEE_LAMPORTS = 1_000_000;
+
+/** NFT mint fee per tier, in lamports. */
+export const MINT_FEE_LAMPORTS: Record<RarityTier, number> = {
+  common: 1_000_000,
+  uncommon: 3_000_000,
