@@ -118,3 +118,63 @@ export const LISTING_FEE_LAMPORTS = 1_000_000;
 export const MINT_FEE_LAMPORTS: Record<RarityTier, number> = {
   common: 1_000_000,
   uncommon: 3_000_000,
+  rare: 10_000_000,
+  holo: 50_000_000,
+  ultra: 200_000_000,
+  secret: 1_000_000_000,
+};
+
+/** tier code <-> name mapping used by the SDK and program. */
+export const TIER_ORDER: RarityTier[] = [
+  'common',
+  'uncommon',
+  'rare',
+  'holo',
+  'ultra',
+  'secret',
+];
+
+// ── Price model (off-chain display, mirrors TOKENOMICS) ──────
+/** base market price in SOL by tier (stage 0, level band 1). */
+export const TIER_BASE_PRICE_SOL: Record<RarityTier, number> = {
+  common: 0.001,
+  uncommon: 0.005,
+  rare: 0.05,
+  holo: 0.3,
+  ultra: 3,
+  secret: 30,
+};
+
+/** level-band price multipliers. */
+export const LEVEL_PRICE_MULT: { max: number; mult: number }[] = [
+  { max: 20, mult: 1.0 },
+  { max: 40, mult: 1.5 },
+  { max: 60, mult: 2.5 },
+  { max: 80, mult: 4.0 },
+  { max: 99, mult: 6.0 },
+  { max: 100, mult: 10.0 },
+];
+
+/** evolution-stage price multipliers (applied to rare and below). */
+export const STAGE_PRICE_MULT = [1.0, 2.0, 4.0];
+
+// ── Type colors (UI parity) ─────────────────────────────────
+export const TYPE_COLORS: Record<MonsterType, string> = {
+  fire: '#c03028',
+  water: '#5080b0',
+  grass: '#508050',
+  electric: '#b8a020',
+  ice: '#70a0b0',
+  dragon: '#6038a0',
+  fighting: '#903028',
+  poison: '#804080',
+  ground: '#a08840',
+  flying: '#7070c0',
+  psychic: '#d05080',
+  bug: '#889810',
+  rock: '#a08860',
+  ghost: '#605088',
+  dark: '#504038',
+  steel: '#9898a0',
+  normal: '#908870',
+};
