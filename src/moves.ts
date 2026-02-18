@@ -49,3 +49,55 @@ export const MOVES: Move[] = [
   { id: 72, name: 'Sludge Wave', type: 'poison', power: 90, acc: 95, pp: 10, status: 'poison', effChance: 40, crit: false, multi: false },
   // ground
   { id: 80, name: 'Mud Slap', type: 'ground', power: 40, acc: 100, pp: 25, status: null, effChance: 0, crit: false, multi: false },
+  { id: 81, name: 'Rock Drill', type: 'ground', power: 65, acc: 100, pp: 15, status: null, effChance: 0, crit: false, multi: false },
+  { id: 82, name: 'Quake Stomp', type: 'ground', power: 95, acc: 95, pp: 10, status: null, effChance: 0, crit: false, multi: false },
+  { id: 83, name: 'Fault Rupture', type: 'ground', power: 120, acc: 80, pp: 5, status: null, effChance: 0, crit: false, multi: false },
+  // flying
+  { id: 90, name: 'Wing Cut', type: 'flying', power: 40, acc: 100, pp: 25, status: null, effChance: 0, crit: false, multi: false },
+  { id: 91, name: 'Gale Dive', type: 'flying', power: 70, acc: 100, pp: 15, status: null, effChance: 0, crit: false, multi: false },
+  { id: 92, name: 'Cyclone Rush', type: 'flying', power: 95, acc: 90, pp: 10, status: null, effChance: 0, crit: false, multi: false },
+  // psychic
+  { id: 100, name: 'Mind Jab', type: 'psychic', power: 40, acc: 100, pp: 25, status: null, effChance: 0, crit: false, multi: false },
+  { id: 101, name: 'Psy Pulse', type: 'psychic', power: 65, acc: 100, pp: 15, status: null, effChance: 0, crit: false, multi: false },
+  { id: 102, name: 'Astral Beam', type: 'psychic', power: 90, acc: 95, pp: 10, status: null, effChance: 0, crit: false, multi: false },
+  { id: 103, name: 'Void Collapse', type: 'psychic', power: 115, acc: 85, pp: 5, status: null, effChance: 0, crit: false, multi: false },
+  // bug
+  { id: 110, name: 'Pin Nip', type: 'bug', power: 40, acc: 100, pp: 25, status: null, effChance: 0, crit: false, multi: false },
+  { id: 111, name: 'Swarm Bite', type: 'bug', power: 65, acc: 100, pp: 15, status: null, effChance: 0, crit: false, multi: true },
+  { id: 112, name: 'Hive Frenzy', type: 'bug', power: 90, acc: 90, pp: 10, status: null, effChance: 0, crit: false, multi: false },
+  // rock
+  { id: 120, name: 'Pebble Toss', type: 'rock', power: 40, acc: 95, pp: 25, status: null, effChance: 0, crit: false, multi: false },
+  { id: 121, name: 'Boulder Hurl', type: 'rock', power: 70, acc: 90, pp: 15, status: null, effChance: 0, crit: false, multi: false },
+  { id: 122, name: 'Stone Avalanche', type: 'rock', power: 95, acc: 85, pp: 10, status: null, effChance: 0, crit: false, multi: false },
+  // ghost
+  { id: 130, name: 'Shade Touch', type: 'ghost', power: 40, acc: 100, pp: 25, status: null, effChance: 0, crit: false, multi: false },
+  { id: 131, name: 'Phantom Hex', type: 'ghost', power: 65, acc: 100, pp: 15, status: null, effChance: 0, crit: false, multi: false },
+  { id: 132, name: 'Wraith Lance', type: 'ghost', power: 90, acc: 95, pp: 10, status: null, effChance: 0, crit: true, multi: false },
+  // dragon
+  { id: 140, name: 'Scale Rake', type: 'dragon', power: 50, acc: 100, pp: 20, status: null, effChance: 0, crit: false, multi: false },
+  { id: 141, name: 'Dragon Pulse', type: 'dragon', power: 80, acc: 100, pp: 12, status: null, effChance: 0, crit: false, multi: false },
+  { id: 142, name: 'Tempest Roar', type: 'dragon', power: 110, acc: 90, pp: 6, status: null, effChance: 0, crit: false, multi: false },
+  // dark
+  { id: 150, name: 'Sneak Bite', type: 'dark', power: 40, acc: 100, pp: 25, status: null, effChance: 0, crit: true, multi: false },
+  { id: 151, name: 'Night Slash', type: 'dark', power: 70, acc: 100, pp: 15, status: null, effChance: 0, crit: true, multi: false },
+  { id: 152, name: 'Abyss Maul', type: 'dark', power: 95, acc: 90, pp: 10, status: null, effChance: 0, crit: false, multi: false },
+  // steel
+  { id: 160, name: 'Metal Tap', type: 'steel', power: 40, acc: 100, pp: 25, status: null, effChance: 0, crit: false, multi: false },
+  { id: 161, name: 'Gear Grind', type: 'steel', power: 65, acc: 100, pp: 15, status: null, effChance: 0, crit: false, multi: false },
+  { id: 162, name: 'Anvil Drop', type: 'steel', power: 95, acc: 90, pp: 10, status: null, effChance: 0, crit: false, multi: false },
+];
+
+/** attack moves grouped by type, sorted by ascending power. */
+export const MOVES_BY_TYPE: Record<string, Move[]> = (() => {
+  const out: Record<string, Move[]> = {};
+  for (const mv of MOVES) {
+    if (mv.power <= 0) continue;
+    (out[mv.type] = out[mv.type] || []).push(mv);
+  }
+  for (const arr of Object.values(out)) arr.sort((a, b) => a.power - b.power);
+  return out;
+})();
+
+const FALLBACK_MOVE: Move = {
+  id: 0,
+  name: 'Strike Hit',
