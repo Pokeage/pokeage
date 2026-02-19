@@ -49,3 +49,55 @@ export function stageForLevel(template: MonsterTemplate, level: number): number 
 
 /** build a fresh, full-HP instance of a species at a level. */
 export function createMonsterInstance(
+  template: MonsterTemplate,
+  level: number,
+): MonsterInstance {
+  const stats = statsAtLevel(template, level);
+  return {
+    templateId: template.id,
+    name: template.name,
+    type: template.type,
+    asset: template.asset,
+    level,
+    xp: 0,
+    stage: stageForLevel(template, level),
+    stats,
+    currentHP: stats.hp,
+    targetStats: targetStatsFor(template),
+    ev1: template.ev1 ?? null,
+    ev2: template.ev2 ?? null,
+    rarity: template.rarity,
+    rarityTier: template.rarityTier,
+    affection: 0,
+  };
+}
+
+/** quick combatant built from a template at a level (GSC stat model). */
+export function makeCombatant(
+  template: MonsterTemplate,
+  level: number,
+): MonsterInstance {
+  const stats: Stats = {
+    hp: statAtLevel(template.base.hp, level, true),
+    atk: statAtLevel(template.base.atk, level),
+    def: statAtLevel(template.base.def, level),
+    spd: statAtLevel(template.base.spd, level),
+  };
+  return {
+    templateId: template.id,
+    name: template.name,
+    type: template.type,
+    asset: template.asset,
+    level,
+    xp: 0,
+    stage: stageForLevel(template, level),
+    stats,
+    currentHP: stats.hp,
+    targetStats: targetStatsFor(template),
+    ev1: template.ev1 ?? null,
+    ev2: template.ev2 ?? null,
+    rarity: template.rarity,
+    rarityTier: template.rarityTier,
+    affection: 0,
+  };
+}
