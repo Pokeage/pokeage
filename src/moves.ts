@@ -101,3 +101,55 @@ export const MOVES_BY_TYPE: Record<string, Move[]> = (() => {
 const FALLBACK_MOVE: Move = {
   id: 0,
   name: 'Strike Hit',
+  type: 'normal',
+  power: 40,
+  acc: 100,
+  pp: 35,
+  status: null,
+  effChance: 0,
+  crit: false,
+  multi: false,
+};
+
+/** pick up to n moves from a pool under a level-derived power cap. */
+function pickTier(arr: Move[] | undefined, n: number, level: number): Move[] {
+  if (!arr || !arr.length) return [];
+  const cap = level >= 40 ? 999 : level >= 28 ? 95 : level >= 16 ? 75 : 55;
+  const ok = arr.filter((m) => m.power <= cap);
+  const src = ok.length ? ok : arr.slice(0, 2);
+  const out: Move[] = [];
+  const step = Math.max(1, Math.floor(src.length / n));
+  for (let i = src.length - 1, c = 0; i >= 0 && c < n; i -= step, c++) {
+    out.push(src[i]);
+  }
+  return out;
+}
+
+/** build a 4-move set for a monster: 3 same-type plus 1 normal, level-scaled. */
+export function getMonMoves(mon: {
+  type: MonsterType;
+  level: number;
+}): Move[] {
+  const type = (mon.type || 'normal') as MonsterType;
+  const lv = mon.level || 5;
+  const same = pickTier(MOVES_BY_TYPE[type], 3, lv);
+  const norm = pickTier(MOVES_BY_TYPE['normal'], 1, lv);
+  const seen = new Set<string>();
+  const moves = [...same, ...norm].filter((mv) => {
+    if (seen.has(mv.name)) return false;
+    seen.add(mv.name);
+    return true;
+  });
+  return moves.length ? moves.slice(0, 4) : [FALLBACK_MOVE];
+}
+
+/** AI move choice: strongest when super-effective, otherwise a mid option. */
+export function pickMove(
+  attacker: MonsterInstance,
+  typeMod: number,
+): Move {
+  if (!attacker.moves) attacker.moves = getMonMoves(attacker);
+  const pool = attacker.moves.slice().sort((a, b) => b.power - a.power);
+  const idx = typeMod >= 2 ? 0 : Math.min(1, pool.length - 1);
+  return pool[idx] || pool[0] || FALLBACK_MOVE;
+}
