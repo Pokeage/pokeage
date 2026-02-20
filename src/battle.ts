@@ -68,3 +68,73 @@ export function simulateBattle(
           move: mv.name,
           dmg: 0,
           typeMod: typeMod0,
+          miss: true,
+          myHP,
+          foeHP,
+        });
+        continue;
+      }
+
+      const roll = calcDamage(atk, def, mv.power, rng);
+      const stab = mv.type === atk.type ? STAB : 1;
+      const crit = rng.chance(CRIT_CHANCE);
+      let dmg = Math.floor(roll.dmg * stab * (crit ? CRIT_MULT : 1));
+
+      // single per-hit cap applied after every multiplier
+      const maxHpDef = who === 'me' ? foeMax : myMax;
+      const capPct = roll.typeMod >= 2 ? HIT_CAP_SUPER : HIT_CAP_NORMAL;
+      dmg = Math.max(1, Math.min(dmg, Math.ceil(maxHpDef * capPct)));
+
+      let status: string | null = null;
+      if (mv.status && mv.effChance > 0 && rng.next() * 100 < mv.effChance) {
+        status = mv.status;
+      }
+
+      if (who === 'me') foeHP = Math.max(0, foeHP - dmg);
+      else myHP = Math.max(0, myHP - dmg);
+
+      events.push({
+        who,
+        atkName: atk.name,
+        move: mv.name,
+        moveType: mv.type,
+        dmg,
+        typeMod: roll.typeMod,
+        crit,
+        status,
+        myHP,
+        foeHP,
+      });
+    }
+  }
+
+  let won: boolean;
+  if (foeHP <= 0) won = true;
+  else if (myHP <= 0) won = false;
+  else won = myHP / myMax >= foeHP / foeMax;
+
+  return { won, myHP, foeHP, turnsUsed: turns, events };
+}
+
+/** lightweight fight for offline catch-up. Returns survivor HP, no event log. */
+export function simulateAuto(
+  party: MonsterInstance,
+  wild: MonsterInstance,
+  rng: Rng = defaultRng,
+): { won: boolean; hpRemaining: number; turnsUsed: number } {
+  let partyHP = party.currentHP;
+  let wildHP = wild.currentHP;
+  let turns = 0;
+
+  while (partyHP > 0 && wildHP > 0 && turns < 20) {
+    turns++;
+    if (party.stats.spd >= wild.stats.spd) {
+      wildHP -= calcDamageSimple(party, wild, rng);
+      if (wildHP <= 0) break;
+      partyHP -= calcDamageSimple(wild, party, rng);
+    } else {
+      partyHP -= calcDamageSimple(wild, party, rng);
+      if (partyHP <= 0) break;
+      wildHP -= calcDamageSimple(party, wild, rng);
+    }
+  }
