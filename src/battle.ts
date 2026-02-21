@@ -138,3 +138,73 @@ export function simulateAuto(
       wildHP -= calcDamageSimple(party, wild, rng);
     }
   }
+
+  return {
+    won: wildHP <= 0,
+    hpRemaining: Math.max(0, partyHP),
+    turnsUsed: turns,
+  };
+}
+
+export interface GymResult {
+  won: boolean;
+  gymDefeated: number;
+  partyFainted: number;
+  results: Array<{ myMon: string; gymMon: string; gymLv: number }>;
+}
+
+/** party vs a leader team, sequential KO. Mutates party currentHP. */
+export function simulateGym(
+  party: MonsterInstance[],
+  gymTeam: GymEntry[],
+  getTemplate: TemplateResolver,
+  rng: Rng = defaultRng,
+): GymResult {
+  let partyIdx = 0;
+  let gymIdx = 0;
+  const results: GymResult['results'] = [];
+  const partyHP = party.map((m) => m.currentHP);
+
+  while (partyIdx < party.length && gymIdx < gymTeam.length) {
+    const myMon = party[partyIdx];
+    const entry = gymTeam[gymIdx];
+    const tpl = getTemplate(entry.monsterId);
+    if (!tpl) {
+      gymIdx++;
+      continue;
+    }
+    const gymMon = makeCombatant(tpl, entry.level);
+    let myHP = partyHP[partyIdx];
+    let gymHP = gymMon.stats.hp;
+
+    while (myHP > 0 && gymHP > 0) {
+      if (myMon.stats.spd >= gymMon.stats.spd) {
+        gymHP -= calcDamageSimple(myMon, gymMon, rng);
+        if (gymHP <= 0) break;
+        myHP -= calcDamageSimple(gymMon, myMon, rng);
+      } else {
+        myHP -= calcDamageSimple(gymMon, myMon, rng);
+        if (myHP <= 0) break;
+        gymHP -= calcDamageSimple(myMon, gymMon, rng);
+      }
+    }
+
+    partyHP[partyIdx] = Math.max(0, myHP);
+    if (gymHP <= 0) {
+      results.push({ myMon: myMon.name, gymMon: tpl.name, gymLv: entry.level });
+      gymIdx++;
+    }
+    if (myHP <= 0) partyIdx++;
+  }
+
+  party.forEach((m, i) => {
+    m.currentHP = Math.max(0, partyHP[i]);
+  });
+
+  return {
+    won: gymIdx >= gymTeam.length,
+    gymDefeated: gymIdx,
+    partyFainted: partyIdx,
+    results,
+  };
+}
