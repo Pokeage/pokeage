@@ -160,3 +160,84 @@ export class Engine {
     this.gymCooldown = 5;
     return false;
   }
+
+  moveToTown(town: Town): void {
+    this.state = 'moving';
+    this.trainer.location = town.id;
+    this.healTeam();
+  }
+
+  doWildEncounter(town: Town, forced = false): EncounterResult {
+    const log: string[] = [];
+    const empty: EncounterResult = { encountered: false, events: [], log };
+    if (!town.routes.length) return empty;
+    const route = this.routeById(town.routes[0]);
+    if (!route) return empty;
+
+    this.state = 'hunting';
+    if (!forced && this.rng.next() > route.encounterRate * ENCOUNTER_RATE_MULT) {
+      log.push(`searching ${route.name}`);
+      return empty;
+    }
+
+    const wild = generateWildMonster(
+      route,
+      this.getTemplate,
+      this.rng,
+      this.opts.buffs,
+    );
+    if (!wild) return empty;
+
+    const lead = this.trainer.team.find((m) => m.currentHP > 0);
+    if (!lead) {
+      this.healTeam();
+      return empty;
+    }
+
+    if (wild.level > lead.level + FLEE_LEVEL_GAP) {
+      log.push(`Lv.${wild.level} ${wild.name} was too strong, backed off`);
+      this.state = 'idle';
+      return { encountered: true, wild, events: [], log };
+    }
+
+    this.state = 'battling';
+    this.trainer.totalBattles++;
+    const result = simulateAuto(lead, wild, this.rng);
+    lead.currentHP = result.hpRemaining;
+
+    let caught = false;
+    let xpGained = 0;
+
+    if (result.won) {
+      addAffection(lead, affectionGainFor(lead, wild.level));
+      const tpl = this.getTemplate(lead.templateId);
+      xpGained = wildXpReward(lead.level, wild.level, this.opts.xpBuff || 1);
+      if (tpl) grantXp(lead, xpGained, tpl);
+
+      if (shouldCatch(this.trainer, wild)) {
+        const cr = attemptCatch(wild, 1, this.rng);
+        this.trainer.items.ball -= cr.ballsUsed;
+        if (cr.caught) {
+          placeNewMonster(this.trainer, wild);
+          this.trainer.totalCaught++;
+          caught = true;
+          log.push(`caught Lv.${wild.level} ${wild.name}`);
+        } else {
+          log.push(`${wild.name} broke free`);
+        }
+      }
+    } else {
+      log.push(`${lead.name} fainted against ${wild.name}`);
+    }
+
+    return {
+      encountered: true,
+      wild,
+      won: result.won,
+      caught,
+      xpGained,
+      events: [],
+      log,
+    };
+  }
+}
