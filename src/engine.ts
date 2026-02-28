@@ -79,3 +79,84 @@ export class Engine {
       return { state: this.state, action: 'heal' };
     }
 
+    if (strat.autoGym !== false && this.shouldChallengeGym(town)) {
+      const won = this.doGymChallenge(town);
+      return {
+        state: this.state,
+        action: 'gym',
+        detail: won ? 'won' : 'lost',
+      };
+    }
+
+    if (
+      strat.autoMove !== false &&
+      town.gym &&
+      this.trainer.badges.includes(town.gym.badge) &&
+      town.nextTown
+    ) {
+      const next = this.townById(town.nextTown);
+      if (next && (!next.requiredBadge || this.trainer.badges.includes(next.requiredBadge))) {
+        this.moveToTown(next);
+        return { state: this.state, action: 'move', detail: next.name };
+      }
+    }
+
+    const enc = this.doWildEncounter(town);
+    return {
+      state: this.state,
+      action: enc.caught ? 'caught' : 'hunt',
+      encounter: enc,
+    };
+  }
+
+  healTeam(): void {
+    this.state = 'healing';
+    this.trainer.team.forEach((m) => {
+      m.currentHP = m.stats.hp;
+    });
+  }
+
+  shouldChallengeGym(town: Town): boolean {
+    if (!town.gym) return false;
+    if (this.trainer.badges.includes(town.gym.badge)) return false;
+    if (this.gymCooldown > 0) {
+      this.gymCooldown--;
+      return false;
+    }
+
+    const gymTowns = this.world.towns
+      .filter((t) => t.gym)
+      .sort((a, b) => (a.gym!.order - b.gym!.order));
+    const idx = gymTowns.findIndex((t) => t.id === town.id);
+    if (idx > 0) {
+      const prev = gymTowns[idx - 1];
+      if (!this.trainer.badges.includes(prev.gym!.badge)) return false;
+    }
+
+    const alive = this.trainer.team.filter((m) => m.currentHP > 0);
+    if (alive.length < 1) return false;
+
+    const leadLevel = this.trainer.team[0].level;
+    const gymMaxLv = Math.max(...town.gym.team.map((t) => t.level));
+    return leadLevel >= gymMaxLv;
+  }
+
+  doGymChallenge(town: Town): boolean {
+    this.state = 'gym';
+    const gym = town.gym!;
+    const party = this.trainer.team.filter((m) => m.currentHP > 0).slice(0, 4);
+    const result = simulateGym(party, gym.team, this.getTemplate, this.rng);
+
+    if (result.won) {
+      this.trainer.badges.push(gym.badge);
+      this.trainer.items.ball = (this.trainer.items.ball || 0) + 3;
+      const xpBuff = this.opts.xpBuff || 1;
+      for (const m of party) {
+        const tpl = this.getTemplate(m.templateId);
+        if (tpl) grantXp(m, gymXpReward(m.level, gym.team.length, xpBuff), tpl);
+      }
+      return true;
+    }
+    this.gymCooldown = 5;
+    return false;
+  }
