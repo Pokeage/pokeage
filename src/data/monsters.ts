@@ -108,3 +108,58 @@ export const SAMPLE_MONSTERS: MonsterTemplate[] = [
     ev1: 26, evoStageAssets: ['emberling', 'magnaroar'], fullLine: [35, 36], rarity: 'common', rarityTier: 'uncommon' },
   { id: 36, name: 'Magnaroar', type: 'fire', asset: 'magnaroar',
     base: { hp: 72, atk: 86, def: 64, spd: 88 }, fullLine: [35, 36], rarity: 'rare', rarityTier: 'rare' },
+  { id: 37, name: 'Ripplet', type: 'water', asset: 'ripplet',
+    base: { hp: 52, atk: 48, def: 58, spd: 50 }, stage1: { hp: 78, atk: 70, def: 84, spd: 66 },
+    ev1: 24, evoStageAssets: ['ripplet', 'aquadon'], fullLine: [37, 38], rarity: 'common', rarityTier: 'common' },
+  { id: 38, name: 'Aquadon', type: 'water', asset: 'aquadon',
+    base: { hp: 78, atk: 70, def: 84, spd: 66 }, fullLine: [37, 38], rarity: 'common', rarityTier: 'uncommon' },
+  { id: 39, name: 'Cinderfox', type: 'fire', asset: 'cinderfox',
+    base: { hp: 46, atk: 60, def: 44, spd: 72 }, rarity: 'common', rarityTier: 'uncommon' },
+  // ── extra single-stage species ──
+  { id: 43, name: 'Boltpup', type: 'electric', asset: 'boltpup',
+    base: { hp: 48, atk: 58, def: 46, spd: 78 }, rarity: 'common', rarityTier: 'common' },
+  { id: 44, name: 'Spinekoi', type: 'water', asset: 'spinekoi',
+    base: { hp: 54, atk: 52, def: 60, spd: 48 }, rarity: 'common', rarityTier: 'common' },
+  { id: 45, name: 'Glimmernewt', type: 'psychic', asset: 'glimmernewt',
+    base: { hp: 50, atk: 72, def: 50, spd: 76 }, rarity: 'common', rarityTier: 'uncommon' },
+  { id: 46, name: 'Thornhog', type: 'grass', asset: 'thornhog',
+    base: { hp: 62, atk: 64, def: 66, spd: 44 }, rarity: 'common', rarityTier: 'uncommon' },
+  { id: 47, name: 'Cragmaw', type: 'rock', asset: 'cragmaw',
+    base: { hp: 64, atk: 78, def: 88, spd: 36 }, rarity: 'common', rarityTier: 'uncommon' },
+  { id: 48, name: 'Frostkit', type: 'ice', asset: 'frostkit',
+    base: { hp: 50, atk: 54, def: 52, spd: 58 }, rarity: 'common', rarityTier: 'common' },
+  { id: 49, name: 'Shadeling', type: 'dark', asset: 'shadeling',
+    base: { hp: 52, atk: 70, def: 50, spd: 72 }, rarity: 'common', rarityTier: 'uncommon' },
+  { id: 50, name: 'Mossback', type: 'bug', asset: 'mossback',
+    base: { hp: 58, atk: 56, def: 62, spd: 46 }, rarity: 'common', rarityTier: 'common' },
+  // ── legendaries (no evolution) ──
+  { id: 40, name: 'Voltaire', type: 'electric', asset: 'voltaire',
+    base: { hp: 90, atk: 110, def: 85, spd: 130 }, rarity: 'legendary', rarityTier: 'secret' },
+  { id: 41, name: 'Terravorg', type: 'dragon', asset: 'terravorg',
+    base: { hp: 100, atk: 130, def: 110, spd: 90 }, rarity: 'legendary', rarityTier: 'secret' },
+  { id: 42, name: 'Umbroth', type: 'dark', asset: 'umbroth',
+    base: { hp: 95, atk: 115, def: 95, spd: 105 }, rarity: 'legendary', rarityTier: 'secret' },
+];
+
+export interface Registry {
+  getMonsterById: (id: number) => MonsterTemplate | undefined;
+  all: () => MonsterTemplate[];
+}
+
+/** build an id-indexed registry from a roster (defaults to the sample set). */
+export function createRegistry(
+  roster: MonsterTemplate[] = SAMPLE_MONSTERS,
+): Registry {
+  const index = new Map<number, MonsterTemplate>();
+  for (const m of roster) index.set(m.id, m);
+  return {
+    getMonsterById: (id) => index.get(id),
+    all: () => roster,
+  };
+}
+
+/** default registry over the sample roster. */
+export const sampleRegistry = createRegistry();
+
+/** the three starter base species. */
+export const STARTER_IDS = [1, 4, 7];
