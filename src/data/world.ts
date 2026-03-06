@@ -176,3 +176,93 @@ export const TOWNS: Town[] = [
       leader: 'SAGE',
       type: 'psychic',
       badge: 'SAGE',
+      team: [
+        { monsterId: 25, level: 38 },
+        { monsterId: 22, level: 39 },
+        { monsterId: 25, level: 41 },
+      ],
+      order: 8,
+    },
+    routes: ['route-9'],
+    nextTown: 'emberpeak',
+    requiredBadge: 'GHOST',
+  },
+  {
+    id: 'emberpeak',
+    name: 'EMBERPEAK ISLE',
+    desc: 'A sunny island blazing under the summer sun.',
+    center: true,
+    gym: {
+      leader: 'BLAZE',
+      type: 'fire',
+      badge: 'EMBER',
+      team: [
+        { monsterId: 4, level: 42 },
+        { monsterId: 5, level: 43 },
+        { monsterId: 6, level: 44 },
+        { monsterId: 5, level: 46 },
+      ],
+      order: 9,
+    },
+    routes: ['route-10'],
+    nextTown: 'forgecrest',
+    requiredBadge: 'SAGE',
+  },
+  {
+    id: 'forgecrest',
+    name: 'FORGECREST CITY',
+    desc: 'An industrial town of steel barns and clanking machinery.',
+    center: true,
+    gym: {
+      leader: 'IRON',
+      type: 'steel',
+      badge: 'STEEL',
+      team: [
+        { monsterId: 27, level: 45 },
+        { monsterId: 27, level: 46 },
+      ],
+      order: 10,
+    },
+    routes: ['route-11'],
+    nextTown: 'dracospire',
+    requiredBadge: 'EMBER',
+  },
+  {
+    id: 'dracospire',
+    name: 'DRACOSPIRE PEAK',
+    desc: 'A forbidden peak where the legendary dragons roam.',
+    center: true,
+    gym: {
+      leader: 'THUNDER',
+      type: 'dragon',
+      badge: 'HORN',
+      team: [
+        { monsterId: 14, level: 48 },
+        { monsterId: 15, level: 49 },
+        { monsterId: 41, level: 50 },
+      ],
+      order: 11,
+    },
+    routes: ['route-12'],
+    nextTown: null,
+    requiredBadge: 'STEEL',
+  },
+];
+
+export const ROUTES: Route[] = [
+  { id: 'route-1', name: 'ROUTE 1', levelRange: [2, 5], wildPool: [28, 29, 30, 22, 16, 10], rarePool: [], encounterRate: 0.15 },
+  { id: 'route-2', name: 'ROUTE 2', levelRange: [4, 8], wildPool: [28, 29, 30, 22, 16, 10], rarePool: [], encounterRate: 0.15 },
+  { id: 'route-3', name: 'ROUTE 3', levelRange: [8, 14], wildPool: [16, 12, 24, 29, 22, 10], rarePool: [14], encounterRate: 0.12 },
+  { id: 'route-4', name: 'ROUTE 4', levelRange: [14, 20], wildPool: [12, 30, 7, 18, 24, 10], rarePool: [20], encounterRate: 0.12 },
+  { id: 'route-5', name: 'ROUTE 5', levelRange: [20, 26], wildPool: [10, 18, 7, 12, 30, 24], rarePool: [21], encounterRate: 0.1 },
+  { id: 'route-6', name: 'ROUTE 6', levelRange: [26, 32], wildPool: [1, 29, 18, 20, 7, 24], rarePool: [40], encounterRate: 0.1 },
+  { id: 'route-7', name: 'ROUTE 7', levelRange: [30, 36], wildPool: [18, 20, 1, 4, 7, 12], rarePool: [40], encounterRate: 0.08 },
+  { id: 'route-8', name: 'ROUTE 8', levelRange: [34, 40], wildPool: [20, 4, 7, 1, 18, 14], rarePool: [42], encounterRate: 0.08 },
+  { id: 'route-9', name: 'ROUTE 9', levelRange: [36, 42], wildPool: [4, 7, 1, 14, 25, 20], rarePool: [42], encounterRate: 0.08 },
+  { id: 'route-10', name: 'ROUTE 10', levelRange: [40, 46], wildPool: [4, 7, 1, 14, 25, 27], rarePool: [40], encounterRate: 0.06 },
+  { id: 'route-11', name: 'ROUTE 11', levelRange: [44, 48], wildPool: [4, 7, 1, 14, 27, 25], rarePool: [41], encounterRate: 0.06 },
+  { id: 'route-12', name: 'ROUTE 12', levelRange: [46, 52], wildPool: [4, 7, 1, 14, 27, 25], rarePool: [41], encounterRate: 0.05 },
+];
+
+/** convenience bundle for the engine. */
+export const WORLD = { towns: TOWNS, routes: ROUTES };
