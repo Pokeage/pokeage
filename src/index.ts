@@ -51,3 +51,56 @@ export { Engine, World, EngineOptions } from './engine';
 export {
   runOfflineCatchup,
   formatOfflineSummary,
+  OfflineSummary,
+} from './offline';
+export {
+  levelMultiplier,
+  stageMultiplier,
+  cardPriceSol,
+  mintFeeLamports,
+  instantSellQuote,
+  tierFromCode,
+  tierToCode,
+} from './pricing';
+export { newTrainer, giveMonster, NewTrainerOptions } from './factory';
+export {
+  saveTrainer,
+  loadTrainer,
+  serializeTrainer,
+  deserializeTrainer,
+  SAVE_VERSION,
+  SavedGame,
+} from './save';
+export {
+  generateOpponent,
+  generateOpponents,
+  OpponentOptions,
+} from './trainers';
+export {
+  analyzeTeam,
+  analyzeTrainer,
+  offensiveCoverage,
+  sharedWeaknesses,
+  TeamReport,
+} from './analytics';
+export {
+  applyStatusTick,
+  isDamaging,
+  isDisabling,
+  STATUS_DOT,
+  STATUS_SKIP_CHANCE,
+  STATUS_CLEAR_CHANCE,
+  StatusKind,
+  StatusTick,
+} from './status';
+export { runBatch, BatchReport } from './balance';
+
+// bundled sample data
+export {
+  SAMPLE_MONSTERS,
+  createRegistry,
+  sampleRegistry,
+  STARTER_IDS,
+  Registry,
+} from './data/monsters';
+export { TOWNS, ROUTES, WORLD } from './data/world';
