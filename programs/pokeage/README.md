@@ -59,3 +59,65 @@ gym badge.
 ## PDA seeds
 
 | pda | seeds |
+| --- | --- |
+| Config | "config" |
+| PlayerState | "player", player pubkey |
+| Listing | "listing", card mint pubkey |
+| BuybackPool | "buyback_pool" |
+| CardMeta | "card", card mint pubkey |
+| escrow ATA | associated token of card mint under the listing PDA |
+
+## Economy constants
+
+| name | value |
+| --- | --- |
+| DECIMALS | 6 |
+| DEPLOY_COST | 1000 PAGE |
+| CATCH_COMMON | 10 PAGE |
+| CATCH_RARE | 100 PAGE |
+| CATCH_LEGENDARY | 1000 PAGE |
+| GYM_COST | 50 PAGE |
+| FORCE_EVOLVE_COST | 75000 PAGE |
+| BURN_BPS | 7000 (70 percent) |
+| POOL_BPS | 3000 (30 percent) |
+| MARKET_FEE_BPS | 500 (5 percent) |
+| POOL_SHARE_BPS | 6000 (60 percent of fee) |
+| BURN_SHARE_BPS | 4000 (40 percent of fee) |
+| INSTANT_SELL_BPS | 5000 (floor times 50 percent) |
+| LISTING_FEE_LAMPORTS | 1000000 (0.001 SOL) |
+| BPS_DENOM | 10000 |
+
+Mint fee by tier in lamports: common 1000000, uncommon 3000000, rare 10000000,
+holo 50000000, ultra 200000000, secret 1000000000.
+
+## Security model
+
+Checked math everywhere. Every add, sub, mul, and div on a value that touches
+funds or counters uses `checked_*` and maps failure to `PokeageError::MathOverflow`,
+so the program aborts instead of wrapping.
+
+CEI ordering. State mutations happen before token or lamport transfers in every
+handler, so a failed transfer cannot leave the program in a half-updated state
+that a re-entrant call could exploit.
+
+Fail-closed instant sell. The pool buy path requires `instant_sell_enabled`,
+`floor_price > 0`, and `total_lamports >= payout`. Any unset gate blocks the
+payout. The floor toggle auto-disables instant sell when the pool cannot cover a
+single payout.
+
+Custom errors. All failures use the `PokeageError` enum with fixed reason codes,
+never inline string requires, so client tooling can branch on stable codes.
+
+Access control. Admin instructions use `has_one = authority` against the config
+PDA. Player instructions check the player_state owner against the signer. Sink
+token accounts are constrained to the pokeage mint and the player authority.
+
+Pause switches. The authority can pause catch, mint, market, and instant-sell
+independently through a single bitmask, which lets a single tx halt a class of
+actions during an incident.
+
+## Status
+
+Pre-deployment. Not audited. Single program id placeholder. Single author. Do
+not use against real funds until the id is replaced and an external review is
+done.
