@@ -1,0 +1,433 @@
+{
+  "address": "Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS",
+  "metadata": {
+    "name": "pokeage",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "On-chain economy for pokeAge. Token sinks, card mint fees, and a SOL card marketplace with a fail-closed instant-sell floor."
+  },
+  "instructions": [
+    {
+      "name": "initialize",
+      "discriminator": [175, 175, 109, 31, 13, 152, 155, 237],
+      "accounts": [
+        { "name": "authority", "writable": true, "signer": true },
+        { "name": "config", "writable": true, "pda": { "seeds": [{ "kind": "const", "value": [99, 111, 110, 102, 105, 103] }] } },
+        { "name": "buyback_pool", "writable": true, "pda": { "seeds": [{ "kind": "const", "value": [98, 117, 121, 98, 97, 99, 107, 95, 112, 111, 111, 108] }] } },
+        { "name": "page_mint" },
+        { "name": "treasury" },
+        { "name": "buyback_vault" },
+        { "name": "token_program" },
+        { "name": "system_program", "address": "11111111111111111111111111111111" }
+      ],
+      "args": [
+        { "name": "burn_bps", "type": "u16" },
+        { "name": "pool_bps", "type": "u16" },
+        { "name": "market_fee_bps", "type": "u16" },
+        { "name": "listing_fee", "type": "u64" }
+      ]
+    },
+    {
+      "name": "deploy_agent",
+      "discriminator": [9, 156, 79, 250, 195, 217, 86, 211],
+      "accounts": [
+        { "name": "player", "writable": true, "signer": true },
+        { "name": "player_state", "writable": true, "pda": { "seeds": [{ "kind": "const", "value": [112, 108, 97, 121, 101, 114] }, { "kind": "account", "path": "player" }] } },
+        { "name": "config", "writable": true, "pda": { "seeds": [{ "kind": "const", "value": [99, 111, 110, 102, 105, 103] }] } },
+        { "name": "page_mint" },
+        { "name": "player_token", "writable": true },
+        { "name": "pool_token", "writable": true },
+        { "name": "token_program" },
+        { "name": "system_program", "address": "11111111111111111111111111111111" }
+      ],
+      "args": []
+    },
+    {
+      "name": "catch_attempt",
+      "discriminator": [121, 64, 130, 220, 71, 71, 56, 109],
+      "accounts": [
+        { "name": "player", "writable": true, "signer": true },
+        { "name": "player_state", "writable": true, "pda": { "seeds": [{ "kind": "const", "value": [112, 108, 97, 121, 101, 114] }, { "kind": "account", "path": "player" }] } },
+        { "name": "config", "writable": true, "pda": { "seeds": [{ "kind": "const", "value": [99, 111, 110, 102, 105, 103] }] } },
+        { "name": "page_mint" },
+        { "name": "player_token", "writable": true },
+        { "name": "pool_token", "writable": true },
+        { "name": "token_program" }
+      ],
+      "args": [{ "name": "rarity", "type": "u8" }]
+    },
+    {
+      "name": "gym_challenge",
+      "discriminator": [56, 17, 91, 174, 213, 80, 240, 144],
+      "accounts": [
+        { "name": "player", "writable": true, "signer": true },
+        { "name": "player_state", "writable": true, "pda": { "seeds": [{ "kind": "const", "value": [112, 108, 97, 121, 101, 114] }, { "kind": "account", "path": "player" }] } },
+        { "name": "config", "writable": true, "pda": { "seeds": [{ "kind": "const", "value": [99, 111, 110, 102, 105, 103] }] } },
+        { "name": "page_mint" },
+        { "name": "player_token", "writable": true },
+        { "name": "pool_token", "writable": true },
+        { "name": "token_program" }
+      ],
+      "args": [{ "name": "badge_index", "type": "u8" }]
+    },
+    {
+      "name": "force_evolve",
+      "discriminator": [200, 49, 12, 119, 71, 178, 99, 30],
+      "accounts": [
+        { "name": "player", "writable": true, "signer": true },
+        { "name": "player_state", "writable": true, "pda": { "seeds": [{ "kind": "const", "value": [112, 108, 97, 121, 101, 114] }, { "kind": "account", "path": "player" }] } },
+        { "name": "config", "writable": true, "pda": { "seeds": [{ "kind": "const", "value": [99, 111, 110, 102, 105, 103] }] } },
+        { "name": "page_mint" },
+        { "name": "player_token", "writable": true },
+        { "name": "pool_token", "writable": true },
+        { "name": "token_program" }
+      ],
+      "args": []
+    },
+    {
+      "name": "mint_card",
+      "discriminator": [13, 184, 158, 248, 240, 165, 152, 90],
+      "accounts": [
+        { "name": "payer", "writable": true, "signer": true },
+        { "name": "config", "writable": true, "pda": { "seeds": [{ "kind": "const", "value": [99, 111, 110, 102, 105, 103] }] } },
+        { "name": "buyback_pool", "writable": true, "pda": { "seeds": [{ "kind": "const", "value": [98, 117, 121, 98, 97, 99, 107, 95, 112, 111, 111, 108] }] } },
+        { "name": "card_mint" },
+        { "name": "card_meta", "writable": true, "pda": { "seeds": [{ "kind": "const", "value": [99, 97, 114, 100] }, { "kind": "account", "path": "card_mint" }] } },
+        { "name": "buyback_vault", "writable": true },
+        { "name": "treasury", "writable": true },
+        { "name": "system_program", "address": "11111111111111111111111111111111" }
+      ],
+      "args": [
+        { "name": "tier", "type": "u8" },
+        { "name": "stage", "type": "u8" },
+        { "name": "level", "type": "u8" }
+      ]
+    },
+    {
+      "name": "list_card",
+      "discriminator": [173, 156, 220, 119, 167, 200, 1, 71],
+      "accounts": [
+        { "name": "seller", "writable": true, "signer": true },
+        { "name": "config", "pda": { "seeds": [{ "kind": "const", "value": [99, 111, 110, 102, 105, 103] }] } },
+        { "name": "buyback_pool", "writable": true, "pda": { "seeds": [{ "kind": "const", "value": [98, 117, 121, 98, 97, 99, 107, 95, 112, 111, 111, 108] }] } },
+        { "name": "card_mint" },
+        { "name": "listing", "writable": true, "pda": { "seeds": [{ "kind": "const", "value": [108, 105, 115, 116, 105, 110, 103] }, { "kind": "account", "path": "card_mint" }] } },
+        { "name": "seller_card", "writable": true },
+        { "name": "escrow_card", "writable": true },
+        { "name": "buyback_vault", "writable": true },
+        { "name": "token_program" },
+        { "name": "associated_token_program", "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL" },
+        { "name": "system_program", "address": "11111111111111111111111111111111" }
+      ],
+      "args": [
+        { "name": "price", "type": "u64" },
+        { "name": "tier", "type": "u8" },
+        { "name": "level", "type": "u8" },
+        { "name": "stage", "type": "u8" }
+      ]
+    },
+    {
+      "name": "cancel_listing",
+      "discriminator": [41, 183, 50, 232, 230, 233, 157, 70],
+      "accounts": [
+        { "name": "seller", "writable": true, "signer": true },
+        { "name": "listing", "writable": true, "pda": { "seeds": [{ "kind": "const", "value": [108, 105, 115, 116, 105, 110, 103] }, { "kind": "account", "path": "card_mint" }] } },
+        { "name": "card_mint" },
+        { "name": "seller_card", "writable": true },
+        { "name": "escrow_card", "writable": true },
+        { "name": "token_program" }
+      ],
+      "args": []
+    },
+    {
+      "name": "buy_card",
+      "discriminator": [44, 33, 96, 173, 60, 217, 47, 137],
+      "accounts": [
+        { "name": "buyer", "writable": true, "signer": true },
+        { "name": "config", "pda": { "seeds": [{ "kind": "const", "value": [99, 111, 110, 102, 105, 103] }] } },
+        { "name": "buyback_pool", "writable": true, "pda": { "seeds": [{ "kind": "const", "value": [98, 117, 121, 98, 97, 99, 107, 95, 112, 111, 111, 108] }] } },
+        { "name": "listing", "writable": true, "pda": { "seeds": [{ "kind": "const", "value": [108, 105, 115, 116, 105, 110, 103] }, { "kind": "account", "path": "card_mint" }] } },
+        { "name": "seller", "writable": true },
+        { "name": "card_mint" },
+        { "name": "buyer_card", "writable": true },
+        { "name": "escrow_card", "writable": true },
+        { "name": "buyback_vault", "writable": true },
+        { "name": "treasury", "writable": true },
+        { "name": "token_program" },
+        { "name": "associated_token_program", "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL" },
+        { "name": "system_program", "address": "11111111111111111111111111111111" }
+      ],
+      "args": []
+    },
+    {
+      "name": "instant_sell",
+      "discriminator": [16, 50, 88, 35, 5, 219, 211, 191],
+      "accounts": [
+        { "name": "seller", "writable": true, "signer": true },
+        { "name": "config", "pda": { "seeds": [{ "kind": "const", "value": [99, 111, 110, 102, 105, 103] }] } },
+        { "name": "buyback_pool", "writable": true, "pda": { "seeds": [{ "kind": "const", "value": [98, 117, 121, 98, 97, 99, 107, 95, 112, 111, 111, 108] }] } },
+        { "name": "card_mint" },
+        { "name": "seller_card", "writable": true },
+        { "name": "vault_card", "writable": true },
+        { "name": "buyback_vault", "writable": true },
+        { "name": "token_program" },
+        { "name": "associated_token_program", "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL" },
+        { "name": "system_program", "address": "11111111111111111111111111111111" }
+      ],
+      "args": []
+    },
+    {
+      "name": "update_floor",
+      "discriminator": [132, 113, 102, 67, 191, 67, 220, 9],
+      "accounts": [
+        { "name": "authority", "signer": true },
+        { "name": "config", "pda": { "seeds": [{ "kind": "const", "value": [99, 111, 110, 102, 105, 103] }] } },
+        { "name": "buyback_pool", "writable": true, "pda": { "seeds": [{ "kind": "const", "value": [98, 117, 121, 98, 97, 99, 107, 95, 112, 111, 111, 108] }] } }
+      ],
+      "args": [{ "name": "floor_price", "type": "u64" }]
+    },
+    {
+      "name": "set_instant_sell",
+      "discriminator": [101, 44, 33, 122, 17, 88, 9, 240],
+      "accounts": [
+        { "name": "authority", "signer": true },
+        { "name": "config", "pda": { "seeds": [{ "kind": "const", "value": [99, 111, 110, 102, 105, 103] }] } },
+        { "name": "buyback_pool", "writable": true, "pda": { "seeds": [{ "kind": "const", "value": [98, 117, 121, 98, 97, 99, 107, 95, 112, 111, 111, 108] }] } }
+      ],
+      "args": [{ "name": "enabled", "type": "bool" }]
+    },
+    {
+      "name": "withdraw_treasury",
+      "discriminator": [40, 63, 122, 158, 144, 216, 83, 96],
+      "accounts": [
+        { "name": "authority", "writable": true, "signer": true },
+        { "name": "config", "pda": { "seeds": [{ "kind": "const", "value": [99, 111, 110, 102, 105, 103] }] } },
+        { "name": "treasury", "writable": true }
+      ],
+      "args": [{ "name": "amount", "type": "u64" }]
+    },
+    {
+      "name": "set_pause",
+      "discriminator": [171, 96, 218, 121, 4, 96, 73, 144],
+      "accounts": [
+        { "name": "authority", "signer": true },
+        { "name": "config", "writable": true, "pda": { "seeds": [{ "kind": "const", "value": [99, 111, 110, 102, 105, 103] }] } }
+      ],
+      "args": [{ "name": "flags", "type": "u8" }]
+    }
+  ],
+  "accounts": [
+    { "name": "Config", "discriminator": [155, 12, 170, 224, 30, 250, 204, 130] },
+    { "name": "PlayerState", "discriminator": [56, 3, 60, 86, 174, 16, 244, 195] },
+    { "name": "Listing", "discriminator": [218, 32, 50, 73, 43, 134, 26, 58] },
+    { "name": "BuybackPool", "discriminator": [197, 191, 4, 116, 142, 90, 215, 35] },
+    { "name": "CardMeta", "discriminator": [60, 137, 73, 12, 195, 41, 24, 8] }
+  ],
+  "events": [
+    { "name": "AgentDeployed", "discriminator": [121, 16, 90, 234, 211, 5, 67, 12] },
+    { "name": "CatchAttempted", "discriminator": [88, 200, 17, 49, 130, 222, 6, 41] },
+    { "name": "GymChallenged", "discriminator": [33, 91, 74, 220, 6, 51, 8, 17] },
+    { "name": "Evolved", "discriminator": [9, 81, 198, 32, 122, 7, 14, 200] },
+    { "name": "CardMinted", "discriminator": [73, 18, 252, 100, 1, 99, 44, 31] },
+    { "name": "CardListed", "discriminator": [184, 60, 22, 9, 119, 200, 8, 71] },
+    { "name": "ListingCancelled", "discriminator": [70, 33, 159, 12, 28, 200, 41, 5] },
+    { "name": "CardSold", "discriminator": [200, 8, 119, 71, 60, 22, 9, 184] },
+    { "name": "InstantSold", "discriminator": [16, 50, 88, 35, 5, 219, 211, 99] }
+  ],
+  "errors": [
+    { "code": 6000, "name": "AgentAlreadyDeployed", "msg": "agent already deployed for this player" },
+    { "code": 6001, "name": "AgentNotDeployed", "msg": "agent not deployed yet" },
+    { "code": 6002, "name": "FeaturePaused", "msg": "this feature is currently paused" },
+    { "code": 6003, "name": "InvalidRarity", "msg": "rarity code out of range" },
+    { "code": 6004, "name": "InvalidTier", "msg": "tier code out of range" },
+    { "code": 6005, "name": "InvalidBadgeIndex", "msg": "badge index out of range" },
+    { "code": 6006, "name": "ListingInactive", "msg": "listing is not active" },
+    { "code": 6007, "name": "NotListingOwner", "msg": "signer is not the listing owner" },
+    { "code": 6008, "name": "PoolInsufficient", "msg": "buyback pool has insufficient lamports" },
+    { "code": 6009, "name": "InstantSellDisabled", "msg": "instant sell is disabled" },
+    { "code": 6010, "name": "FloorNotSet", "msg": "floor price is not set" },
+    { "code": 6011, "name": "MathOverflow", "msg": "checked math overflow" },
+    { "code": 6012, "name": "InvalidFeeConfig", "msg": "fee config is invalid" },
+    { "code": 6013, "name": "Unauthorized", "msg": "signer is not authorized" },
+    { "code": 6014, "name": "InsufficientFunds", "msg": "insufficient funds for this action" },
+    { "code": 6015, "name": "InvalidPrice", "msg": "price must be greater than zero" }
+  ],
+  "types": [
+    {
+      "name": "Config",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          { "name": "authority", "type": "pubkey" },
+          { "name": "page_mint", "type": "pubkey" },
+          { "name": "treasury", "type": "pubkey" },
+          { "name": "buyback_vault", "type": "pubkey" },
+          { "name": "burn_bps", "type": "u16" },
+          { "name": "pool_bps", "type": "u16" },
+          { "name": "market_fee_bps", "type": "u16" },
+          { "name": "instant_sell_bps", "type": "u16" },
+          { "name": "listing_fee", "type": "u64" },
+          { "name": "total_burned", "type": "u64" },
+          { "name": "total_cards_minted", "type": "u64" },
+          { "name": "paused", "type": "u8" },
+          { "name": "bump", "type": "u8" }
+        ]
+      }
+    },
+    {
+      "name": "PlayerState",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          { "name": "owner", "type": "pubkey" },
+          { "name": "agent_deployed", "type": "bool" },
+          { "name": "total_caught", "type": "u64" },
+          { "name": "gym_wins", "type": "u32" },
+          { "name": "badges", "type": "u16" },
+          { "name": "last_action", "type": "i64" },
+          { "name": "bump", "type": "u8" }
+        ]
+      }
+    },
+    {
+      "name": "Listing",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          { "name": "seller", "type": "pubkey" },
+          { "name": "card_mint", "type": "pubkey" },
+          { "name": "price", "type": "u64" },
+          { "name": "tier", "type": "u8" },
+          { "name": "level", "type": "u8" },
+          { "name": "stage", "type": "u8" },
+          { "name": "created_at", "type": "i64" },
+          { "name": "active", "type": "bool" },
+          { "name": "bump", "type": "u8" }
+        ]
+      }
+    },
+    {
+      "name": "BuybackPool",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          { "name": "total_lamports", "type": "u64" },
+          { "name": "lifetime_in", "type": "u64" },
+          { "name": "lifetime_out", "type": "u64" },
+          { "name": "floor_price", "type": "u64" },
+          { "name": "instant_sell_enabled", "type": "bool" },
+          { "name": "bump", "type": "u8" }
+        ]
+      }
+    },
+    {
+      "name": "CardMeta",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          { "name": "mint", "type": "pubkey" },
+          { "name": "owner", "type": "pubkey" },
+          { "name": "tier", "type": "u8" },
+          { "name": "stage", "type": "u8" },
+          { "name": "level", "type": "u8" },
+          { "name": "minted_at", "type": "i64" },
+          { "name": "bump", "type": "u8" }
+        ]
+      }
+    },
+    {
+      "name": "AgentDeployed",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          { "name": "player", "type": "pubkey" },
+          { "name": "burned", "type": "u64" }
+        ]
+      }
+    },
+    {
+      "name": "CatchAttempted",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          { "name": "player", "type": "pubkey" },
+          { "name": "rarity", "type": "u8" },
+          { "name": "burned", "type": "u64" },
+          { "name": "to_pool", "type": "u64" }
+        ]
+      }
+    },
+    {
+      "name": "GymChallenged",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          { "name": "player", "type": "pubkey" },
+          { "name": "badge_index", "type": "u8" }
+        ]
+      }
+    },
+    {
+      "name": "Evolved",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          { "name": "player", "type": "pubkey" },
+          { "name": "burned", "type": "u64" }
+        ]
+      }
+    },
+    {
+      "name": "CardMinted",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          { "name": "card_mint", "type": "pubkey" },
+          { "name": "tier", "type": "u8" },
+          { "name": "fee", "type": "u64" }
+        ]
+      }
+    },
+    {
+      "name": "CardListed",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          { "name": "listing", "type": "pubkey" },
+          { "name": "price", "type": "u64" }
+        ]
+      }
+    },
+    {
+      "name": "ListingCancelled",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          { "name": "listing", "type": "pubkey" }
+        ]
+      }
+    },
+    {
+      "name": "CardSold",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          { "name": "listing", "type": "pubkey" },
+          { "name": "buyer", "type": "pubkey" },
+          { "name": "price", "type": "u64" },
+          { "name": "fee", "type": "u64" }
+        ]
+      }
+    },
+    {
+      "name": "InstantSold",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          { "name": "seller", "type": "pubkey" },
+          { "name": "payout", "type": "u64" }
+        ]
+      }
+    }
+  ]
+}
