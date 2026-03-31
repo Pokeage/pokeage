@@ -60,3 +60,65 @@ pub const RARITY_LEGENDARY: u8 = 2;
 
 // nft mint fee per tier, lamports
 pub const MINT_FEE_COMMON: u64 = 1_000_000; // 0.001 sol
+pub const MINT_FEE_UNCOMMON: u64 = 3_000_000;
+pub const MINT_FEE_RARE: u64 = 10_000_000;
+pub const MINT_FEE_HOLO: u64 = 50_000_000;
+pub const MINT_FEE_ULTRA: u64 = 200_000_000;
+pub const MINT_FEE_SECRET: u64 = 1_000_000_000;
+
+// pda seeds
+pub const CONFIG_SEED: &[u8] = b"config";
+pub const PLAYER_SEED: &[u8] = b"player";
+pub const LISTING_SEED: &[u8] = b"listing";
+pub const POOL_SEED: &[u8] = b"buyback_pool";
+pub const CARD_SEED: &[u8] = b"card";
+pub const ESCROW_SEED: &[u8] = b"escrow";
+
+use anchor_lang::prelude::*;
+use crate::errors::PokeageError;
+
+/// lamport mint fee for a tier code. rejects out-of-range tiers.
+pub fn mint_fee_for_tier(tier: u8) -> Result<u64> {
+    let fee = match tier {
+        TIER_COMMON => MINT_FEE_COMMON,
+        TIER_UNCOMMON => MINT_FEE_UNCOMMON,
+        TIER_RARE => MINT_FEE_RARE,
+        TIER_HOLO => MINT_FEE_HOLO,
+        TIER_ULTRA => MINT_FEE_ULTRA,
+        TIER_SECRET => MINT_FEE_SECRET,
+        _ => return Err(error!(PokeageError::InvalidTier)),
+    };
+    Ok(fee)
+}
+
+/// token sink cost for a catch rarity code.
+pub fn catch_cost_for_rarity(rarity: u8) -> Result<u64> {
+    let cost = match rarity {
+        RARITY_NORMAL => CATCH_COMMON,
+        RARITY_RARE => CATCH_RARE,
+        RARITY_LEGENDARY => CATCH_LEGENDARY,
+        _ => return Err(error!(PokeageError::InvalidRarity)),
+    };
+    Ok(cost)
+}
+
+/// `amount * bps / 10000` in u128 space, checked, then narrowed back to u64.
+/// shared by fee and split math so rounding behaves identically everywhere.
+pub fn bps_of(amount: u64, bps: u64) -> Result<u64> {
+    let v = (amount as u128)
+        .checked_mul(bps as u128)
+        .ok_or(PokeageError::MathOverflow)?
+        .checked_div(BPS_DENOM as u128)
+        .ok_or(PokeageError::MathOverflow)?;
+    if v > u64::MAX as u128 {
+        return Err(error!(PokeageError::MathOverflow));
+    }
+    Ok(v as u64)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn page_helper_scales_by_decimals() {
