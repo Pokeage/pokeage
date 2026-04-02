@@ -122,3 +122,66 @@ mod tests {
 
     #[test]
     fn page_helper_scales_by_decimals() {
+        assert_eq!(pokeage(1), 1_000_000);
+        assert_eq!(pokeage(1_000), DEPLOY_COST);
+        assert_eq!(pokeage(75_000), FORCE_EVOLVE_COST);
+    }
+
+    #[test]
+    fn burn_and_pool_bps_sum_to_denom() {
+        assert_eq!(BURN_BPS as u64 + POOL_BPS as u64, BPS_DENOM);
+        assert_eq!(POOL_SHARE_BPS as u64 + BURN_SHARE_BPS as u64, BPS_DENOM);
+    }
+
+    #[test]
+    fn bps_of_matches_expected_cuts() {
+        // 70 percent of deploy cost is the burn part
+        assert_eq!(bps_of(DEPLOY_COST, BURN_BPS as u64).unwrap(), 700_000_000);
+        // remainder is the pool part, nothing lost
+        let burn = bps_of(DEPLOY_COST, BURN_BPS as u64).unwrap();
+        assert_eq!(DEPLOY_COST - burn, 300_000_000);
+    }
+
+    #[test]
+    fn market_fee_then_share_split() {
+        let price = 1_000_000_000u64; // 1 sol
+        let fee = bps_of(price, MARKET_FEE_BPS as u64).unwrap();
+        assert_eq!(fee, 50_000_000); // 5 percent
+        let pool = bps_of(fee, POOL_SHARE_BPS as u64).unwrap();
+        let burn = fee - pool;
+        assert_eq!(pool, 30_000_000); // 60 percent of fee
+        assert_eq!(burn, 20_000_000); // 40 percent of fee
+    }
+
+    #[test]
+    fn instant_sell_pays_half_of_floor() {
+        let floor = 2_000_000u64;
+        assert_eq!(bps_of(floor, INSTANT_SELL_BPS as u64).unwrap(), 1_000_000);
+    }
+
+    #[test]
+    fn mint_fee_table_is_monotonic() {
+        let mut prev = 0u64;
+        for tier in 0..=MAX_TIER {
+            let fee = mint_fee_for_tier(tier).unwrap();
+            assert!(fee > prev, "tier {} fee should grow", tier);
+            prev = fee;
+        }
+        assert!(mint_fee_for_tier(MAX_TIER + 1).is_err());
+    }
+
+    #[test]
+    fn catch_cost_table_rejects_bad_rarity() {
+        assert_eq!(catch_cost_for_rarity(0).unwrap(), CATCH_COMMON);
+        assert_eq!(catch_cost_for_rarity(1).unwrap(), CATCH_RARE);
+        assert_eq!(catch_cost_for_rarity(2).unwrap(), CATCH_LEGENDARY);
+        assert!(catch_cost_for_rarity(3).is_err());
+    }
+
+    #[test]
+    fn bps_of_does_not_overflow_on_large_input() {
+        // u64::MAX times 10000 would overflow u64, must stay in u128
+        let r = bps_of(u64::MAX, 100).unwrap();
+        assert_eq!(r, (u64::MAX as u128 * 100 / 10_000) as u64);
+    }
+}
