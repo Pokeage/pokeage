@@ -56,3 +56,61 @@ pub struct SetInstantSell<'info> {
 
 pub fn set_instant_sell(ctx: Context<SetInstantSell>, enabled: bool) -> Result<()> {
     // guard: cannot enable without a floor, keeps the fail-closed invariant
+    if enabled {
+        require!(
+            ctx.accounts.buyback_pool.floor_price > 0,
+            PokeageError::FloorNotSet
+        );
+    }
+    ctx.accounts.buyback_pool.instant_sell_enabled = enabled;
+    Ok(())
+}
+
+#[derive(Accounts)]
+pub struct WithdrawTreasury<'info> {
+    #[account(mut)]
+    pub authority: Signer<'info>,
+
+    #[account(
+        seeds = [CONFIG_SEED],
+        bump = config.bump,
+        has_one = authority @ PokeageError::Unauthorized
+    )]
+    pub config: Account<'info, Config>,
+
+    /// treasury sol home, must match config.
+    /// CHECK: must equal config.treasury.
+    #[account(mut, address = config.treasury)]
+    pub treasury: UncheckedAccount<'info>,
+}
+
+pub fn withdraw_treasury(ctx: Context<WithdrawTreasury>, amount: u64) -> Result<()> {
+    require!(
+        ctx.accounts.treasury.lamports() >= amount,
+        PokeageError::InsufficientFunds
+    );
+    move_lamports_pda(
+        &ctx.accounts.treasury.to_account_info(),
+        &ctx.accounts.authority.to_account_info(),
+        amount,
+    )?;
+    Ok(())
+}
+
+#[derive(Accounts)]
+pub struct SetPause<'info> {
+    pub authority: Signer<'info>,
+
+    #[account(
+        mut,
+        seeds = [CONFIG_SEED],
+        bump = config.bump,
+        has_one = authority @ PokeageError::Unauthorized
+    )]
+    pub config: Account<'info, Config>,
+}
+
+pub fn set_pause(ctx: Context<SetPause>, flags: u8) -> Result<()> {
+    ctx.accounts.config.paused = flags;
+    Ok(())
+}
