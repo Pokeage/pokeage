@@ -120,3 +120,65 @@ pub fn buy_card_handler(ctx: Context<BuyCard>) -> Result<()> {
     if pool_cut > 0 {
         transfer(
             CpiContext::new(
+                ctx.accounts.system_program.to_account_info(),
+                Transfer {
+                    from: ctx.accounts.buyer.to_account_info(),
+                    to: ctx.accounts.buyback_vault.to_account_info(),
+                },
+            ),
+            pool_cut,
+        )?;
+    }
+    // buyer -> treasury, burn share of fee
+    if burn_cut > 0 {
+        transfer(
+            CpiContext::new(
+                ctx.accounts.system_program.to_account_info(),
+                Transfer {
+                    from: ctx.accounts.buyer.to_account_info(),
+                    to: ctx.accounts.treasury.to_account_info(),
+                },
+            ),
+            burn_cut,
+        )?;
+    }
+
+    // card escrow -> buyer
+    let seeds: &[&[u8]] = &[LISTING_SEED, card_mint_key.as_ref(), &[ctx.accounts.listing.bump]];
+    let signer = &[seeds];
+    let xfer = TransferChecked {
+        from: ctx.accounts.escrow_card.to_account_info(),
+        mint: ctx.accounts.card_mint.to_account_info(),
+        to: ctx.accounts.buyer_card.to_account_info(),
+        authority: ctx.accounts.listing.to_account_info(),
+    };
+    token_interface::transfer_checked(
+        CpiContext::new_with_signer(
+            ctx.accounts.token_program.to_account_info(),
+            xfer,
+            signer,
+        ),
+        1,
+        ctx.accounts.card_mint.decimals,
+    )?;
+
+    // reclaim escrow ata rent to the seller
+    let close = CloseAccount {
+        account: ctx.accounts.escrow_card.to_account_info(),
+        destination: ctx.accounts.seller.to_account_info(),
+        authority: ctx.accounts.listing.to_account_info(),
+    };
+    token_interface::close_account(CpiContext::new_with_signer(
+        ctx.accounts.token_program.to_account_info(),
+        close,
+        signer,
+    ))?;
+
+    emit!(CardSold {
+        listing: listing_key,
+        buyer: ctx.accounts.buyer.key(),
+        price,
+        fee,
+    });
+    Ok(())
+}
