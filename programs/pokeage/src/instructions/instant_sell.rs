@@ -57,3 +57,62 @@ pub struct InstantSell<'info> {
 
 pub fn instant_sell_handler(ctx: Context<InstantSell>) -> Result<()> {
     require!(
+        !ctx.accounts.config.is_paused(Config::PAUSE_INSTANT_SELL),
+        PokeageError::FeaturePaused
+    );
+
+    // fail-closed: both gates must be open
+    require!(
+        ctx.accounts.buyback_pool.instant_sell_enabled,
+        PokeageError::InstantSellDisabled
+    );
+    require!(
+        ctx.accounts.buyback_pool.floor_price > 0,
+        PokeageError::FloorNotSet
+    );
+
+    let floor = ctx.accounts.buyback_pool.floor_price;
+    let payout = bps_of(floor, INSTANT_SELL_BPS as u64)?;
+
+    require!(
+        ctx.accounts.buyback_pool.total_lamports >= payout,
+        PokeageError::PoolInsufficient
+    );
+
+    // cei: debit pool accounting before moving anything
+    let pool = &mut ctx.accounts.buyback_pool;
+    pool.total_lamports = pool
+        .total_lamports
+        .checked_sub(payout)
+        .ok_or(PokeageError::MathOverflow)?;
+    pool.lifetime_out = pool
+        .lifetime_out
+        .checked_add(payout)
+        .ok_or(PokeageError::MathOverflow)?;
+
+    // card seller -> vault
+    let xfer = TransferChecked {
+        from: ctx.accounts.seller_card.to_account_info(),
+        mint: ctx.accounts.card_mint.to_account_info(),
+        to: ctx.accounts.vault_card.to_account_info(),
+        authority: ctx.accounts.seller.to_account_info(),
+    };
+    token_interface::transfer_checked(
+        CpiContext::new(ctx.accounts.token_program.to_account_info(), xfer),
+        1,
+        ctx.accounts.card_mint.decimals,
+    )?;
+
+    // payout: vault lamports -> seller. vault is a pda we control via config.
+    move_lamports_pda(
+        &ctx.accounts.buyback_vault.to_account_info(),
+        &ctx.accounts.seller.to_account_info(),
+        payout,
+    )?;
+
+    emit!(InstantSold {
+        seller: ctx.accounts.seller.key(),
+        payout,
+    });
+    Ok(())
+}
