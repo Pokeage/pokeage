@@ -61,3 +61,66 @@ pub fn mint_card_handler(ctx: Context<MintCard>, tier: u8, stage: u8, level: u8)
     // 50 percent to pool, remainder to treasury so the full fee is accounted
     let pool_cut = bps_of(fee, 5_000)?;
     let treasury_cut = fee.checked_sub(pool_cut).ok_or(PokeageError::MathOverflow)?;
+
+    // cei: write card record and counters before moving lamports
+    let now = Clock::get()?.unix_timestamp;
+    let card = &mut ctx.accounts.card_meta;
+    card.mint = ctx.accounts.card_mint.key();
+    card.owner = ctx.accounts.payer.key();
+    card.tier = tier;
+    card.stage = stage;
+    card.level = level;
+    card.minted_at = now;
+    card.bump = ctx.bumps.card_meta;
+
+    let config = &mut ctx.accounts.config;
+    config.total_cards_minted = config
+        .total_cards_minted
+        .checked_add(1)
+        .ok_or(PokeageError::MathOverflow)?;
+
+    let pool = &mut ctx.accounts.buyback_pool;
+    pool.total_lamports = pool
+        .total_lamports
+        .checked_add(pool_cut)
+        .ok_or(PokeageError::MathOverflow)?;
+    pool.lifetime_in = pool
+        .lifetime_in
+        .checked_add(pool_cut)
+        .ok_or(PokeageError::MathOverflow)?;
+
+    // payer -> pool vault
+    if pool_cut > 0 {
+        transfer(
+            CpiContext::new(
+                ctx.accounts.system_program.to_account_info(),
+                Transfer {
+                    from: ctx.accounts.payer.to_account_info(),
+                    to: ctx.accounts.buyback_vault.to_account_info(),
+                },
+            ),
+            pool_cut,
+        )?;
+    }
+
+    // payer -> treasury
+    if treasury_cut > 0 {
+        transfer(
+            CpiContext::new(
+                ctx.accounts.system_program.to_account_info(),
+                Transfer {
+                    from: ctx.accounts.payer.to_account_info(),
+                    to: ctx.accounts.treasury.to_account_info(),
+                },
+            ),
+            treasury_cut,
+        )?;
+    }
+
+    emit!(CardMinted {
+        card_mint: ctx.accounts.card_mint.key(),
+        tier,
+        fee,
+    });
+    Ok(())
+}
