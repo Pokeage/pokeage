@@ -63,3 +63,68 @@ export class PokeageClient {
       true,
       TOKEN_2022_PROGRAM_ID,
     );
+  }
+
+  // ── reads ─────────────────────────────────────────────────
+  fetchConfig() {
+    return getConfig(this.connection);
+  }
+  fetchPool() {
+    return getPool(this.connection);
+  }
+  fetchPlayer(owner: PublicKey) {
+    return getPlayer(this.connection, owner);
+  }
+  fetchListing(cardMint: PublicKey) {
+    return getListing(this.connection, cardMint);
+  }
+  pageBalance(owner: PublicKey, mint: PublicKey): Promise<TokenBalance> {
+    return getTokenBalance(this.connection, owner, mint);
+  }
+
+  // ── quotes (off-chain, match on-chain charges) ────────────
+  marketPriceSol(tierCode: number, level: number, stage: number): number {
+    return cardPriceSol(tierFromCode(tierCode), level, stage);
+  }
+  mintFee(tierCode: number): number {
+    return mintFeeLamports(tierFromCode(tierCode));
+  }
+  /** instant-sell payout for a card given the current pool floor. */
+  async instantSellPayout(): Promise<bigint> {
+    const pool = await this.fetchPool();
+    if (!pool) return 0n;
+    return BigInt(instantSellQuote(Number(pool.floorPrice)));
+  }
+
+  // ── instruction builders with token accounts resolved ─────
+  deployAgent(authority: PublicKey, mint: PublicKey): TransactionInstruction {
+    return ix.deployAgent(this.sink(authority, mint));
+  }
+  catchAttempt(
+    authority: PublicKey,
+    mint: PublicKey,
+    rarity: CatchRarity,
+  ): TransactionInstruction {
+    return ix.catchAttempt(this.sink(authority, mint), rarity);
+  }
+  gymChallenge(
+    authority: PublicKey,
+    mint: PublicKey,
+    badgeIndex: number,
+  ): TransactionInstruction {
+    return ix.gymChallenge(this.sink(authority, mint), badgeIndex);
+  }
+  forceEvolve(authority: PublicKey, mint: PublicKey): TransactionInstruction {
+    return ix.forceEvolve(this.sink(authority, mint));
+  }
+
+  private sink(authority: PublicKey, mint: PublicKey): ix.SinkAccounts {
+    const poolAuthority = this.pool();
+    return {
+      authority,
+      pageMint: mint,
+      playerAta: this.pageAta(authority, mint),
+      poolAta: this.pageAta(poolAuthority, mint),
+    };
+  }
+}
