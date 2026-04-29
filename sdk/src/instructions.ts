@@ -84,3 +84,89 @@ export function initialize(params: {
     .disc(IX_DISC.initialize)
     .u16(params.burnBps)
     .u16(params.poolBps)
+    .u16(params.marketFeeBps)
+    .u64(params.listingFee)
+    .build();
+  return ix(data, [
+    w(config),
+    w(pool),
+    w(params.authority, true),
+    r(params.pageMint),
+    r(params.treasury),
+    r(params.buybackVault),
+    r(SystemProgram.programId),
+  ]);
+}
+
+export function deployAgent(a: SinkAccounts): TransactionInstruction {
+  return ix(sinkData(IX_DISC.deploy_agent), sinkKeys(a));
+}
+
+export function catchAttempt(
+  a: SinkAccounts,
+  rarity: CatchRarity,
+): TransactionInstruction {
+  return ix(
+    sinkData(IX_DISC.catch_attempt, (b) => b.u8(rarity)),
+    sinkKeys(a),
+  );
+}
+
+export function gymChallenge(
+  a: SinkAccounts,
+  badgeIndex: number,
+): TransactionInstruction {
+  return ix(
+    sinkData(IX_DISC.gym_challenge, (b) => b.u8(badgeIndex)),
+    sinkKeys(a),
+  );
+}
+
+export function forceEvolve(a: SinkAccounts): TransactionInstruction {
+  return ix(sinkData(IX_DISC.force_evolve), sinkKeys(a));
+}
+
+export function updateFloor(
+  authority: PublicKey,
+  floorPrice: bigint | number,
+): TransactionInstruction {
+  const [config] = configPda();
+  const [pool] = poolPda();
+  const data = new BorshWriter()
+    .disc(IX_DISC.update_floor)
+    .u64(floorPrice)
+    .build();
+  return ix(data, [r(config), w(pool), w(authority, true)]);
+}
+
+export function setInstantSell(
+  authority: PublicKey,
+  enabled: boolean,
+): TransactionInstruction {
+  const [config] = configPda();
+  const [pool] = poolPda();
+  const data = new BorshWriter()
+    .disc(IX_DISC.set_instant_sell)
+    .bool(enabled)
+    .build();
+  return ix(data, [r(config), w(pool), w(authority, true)]);
+}
+
+export function setPause(
+  authority: PublicKey,
+  flags: number,
+): TransactionInstruction {
+  const [config] = configPda();
+  const data = new BorshWriter().disc(IX_DISC.set_pause).u8(flags).build();
+  return ix(data, [w(config), w(authority, true)]);
+}
+
+export function withdrawTreasury(params: {
+  authority: PublicKey;
+  treasury: PublicKey;
+  amount: bigint | number;
+}): TransactionInstruction {
+  const [config] = configPda();
+  const data = new BorshWriter()
+    .disc(IX_DISC.withdraw_treasury)
+    .u64(params.amount)
