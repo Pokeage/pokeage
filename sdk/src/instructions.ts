@@ -170,3 +170,90 @@ export function withdrawTreasury(params: {
   const data = new BorshWriter()
     .disc(IX_DISC.withdraw_treasury)
     .u64(params.amount)
+    .build();
+  return ix(data, [
+    r(config),
+    w(params.treasury),
+    w(params.authority, true),
+    r(SystemProgram.programId),
+  ]);
+}
+
+export function listCard(params: {
+  seller: PublicKey;
+  cardMint: PublicKey;
+  price: bigint | number;
+  tier: number;
+  level: number;
+  stage: number;
+  sellerCardAta: PublicKey;
+  escrowAta: PublicKey;
+}): TransactionInstruction {
+  const [config] = configPda();
+  const [pool] = poolPda();
+  const [listing] = listingPda(params.cardMint);
+  const data = new BorshWriter()
+    .disc(IX_DISC.list_card)
+    .u64(params.price)
+    .u8(params.tier)
+    .u8(params.level)
+    .u8(params.stage)
+    .build();
+  return ix(data, [
+    w(config),
+    w(pool),
+    w(listing),
+    w(params.seller, true),
+    r(params.cardMint),
+    w(params.sellerCardAta),
+    w(params.escrowAta),
+    r(TOKEN_2022_PROGRAM_ID),
+    r(SystemProgram.programId),
+  ]);
+}
+
+export function buyCard(params: {
+  buyer: PublicKey;
+  seller: PublicKey;
+  cardMint: PublicKey;
+  escrowAta: PublicKey;
+  buyerCardAta: PublicKey;
+}): TransactionInstruction {
+  const [config] = configPda();
+  const [pool] = poolPda();
+  const [listing] = listingPda(params.cardMint);
+  const data = new BorshWriter().disc(IX_DISC.buy_card).build();
+  return ix(data, [
+    w(config),
+    w(pool),
+    w(listing),
+    w(params.buyer, true),
+    w(params.seller),
+    r(params.cardMint),
+    w(params.escrowAta),
+    w(params.buyerCardAta),
+    r(TOKEN_2022_PROGRAM_ID),
+    r(SystemProgram.programId),
+  ]);
+}
+
+export function instantSell(params: {
+  seller: PublicKey;
+  cardMint: PublicKey;
+  sellerCardAta: PublicKey;
+  vaultAta: PublicKey;
+}): TransactionInstruction {
+  const [config] = configPda();
+  const [pool] = poolPda();
+  const data = new BorshWriter().disc(IX_DISC.instant_sell).build();
+  return ix(data, [
+    r(config),
+    w(pool),
+    w(params.seller, true),
+    r(params.cardMint),
+    w(params.sellerCardAta),
+    w(params.vaultAta),
+    r(TOKEN_2022_PROGRAM_ID),
+    r(SystemProgram.programId),
+  ]);
+}
