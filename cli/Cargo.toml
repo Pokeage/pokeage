@@ -1,0 +1,22 @@
+[package]
+name = "pokeage-cli"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+description = "read-only operator CLI for the pokeAge $PAGE on-chain economy"
+
+[[bin]]
+name = "pokeage"
+path = "src/main.rs"
+
+[dependencies]
+solana-client = { workspace = true }
+solana-sdk = { workspace = true }
+clap = { workspace = true }
+tokio = { workspace = true }
+serde = { workspace = true }
+borsh = { workspace = true }
+thiserror = { workspace = true }
+anyhow = "1"
+serde_json = "1"
+bs58 = "0.5"
