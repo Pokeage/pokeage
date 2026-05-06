@@ -52,3 +52,57 @@ Release binary:
 cargo build -p pokeage-cli --release
 ```
 
+The compiled binary lands at `target/debug/pokeage` (or `target/release/pokeage`).
+Run the test suite:
+
+```
+cargo test -p pokeage-cli
+```
+
+## Economy constants
+
+The constants mirror `programs/pokeage/src/constants.rs` so CLI output and the chain
+agree without a shared crate. Token sinks: deploy 1,000, catch 10 / 100 / 1,000,
+gym 50, force evolve 75,000 (all `$PAGE`). Every sink splits 70 percent burned,
+30 percent to the buyback pool. Market fee is 5 percent, instant sell pays 50
+percent of floor, listing fee is 0.001 SOL.
+
+## Examples
+
+Local config view, no network needed:
+
+```
+$ pokeage config
+pokeage cli config
+  rpc url      https://api.devnet.solana.com
+  keypair      /home/op/.config/solana/id.json
+  program id   Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS
+
+derived pdas
+  config       7Xk... (bump 254)
+  buyback pool 9Qm... (bump 251)
+
+economy constants (token amounts in $PAGE, 6 decimals)
+  deploy cost        1000.000000 $PAGE  (1000000000 base units)
+  catch common         10.000000 $PAGE  (10000000 base units)
+  ...
+```
+
+Chain stats against a deployed cluster:
+
+```
+$ pokeage stats --rpc-url https://api.devnet.solana.com
+pokeage economy stats
+  config pda   7Xk...
+  pool pda     9Qm...
+
+config
+  total burned     1240500.000000 $PAGE
+  cards minted     318
+  burn / pool bps  7000 / 3000
+  paused           none
+
+buyback pool
+  balance          42.500000000 SOL
+  floor price      0.100000000 SOL
+  instant sell     enabled
