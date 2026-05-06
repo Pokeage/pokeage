@@ -106,3 +106,58 @@ buyback pool
   balance          42.500000000 SOL
   floor price      0.100000000 SOL
   instant sell     enabled
+  instant quote    0.050000000 SOL
+```
+
+Before the program is initialized the same command reports gracefully:
+
+```
+$ pokeage stats
+config       not initialized
+buyback pool not initialized
+```
+
+Inspect one player:
+
+```
+$ pokeage player 4Nd9k2...PqR
+progress
+  agent        deployed
+  total caught 57
+  gym wins     3
+  badges       3 of 12
+badge map (1 = owned)
+  bits 1 1 1 0 0 0 0 0 0 0 0 0
+```
+
+Local 90-day projection at 5,000 daily active users:
+
+```
+$ pokeage sim --days 90 --users 5000
+pokeage economy projection
+  horizon          90 days
+  daily active     5000 users
+
+daily totals (constant under flat actives)
+  sink             1387500.000000 $PAGE
+  burn (70%)        971250.000000 $PAGE
+  pool (30%)        416250.000000 $PAGE
+
+  day          burn/day          pool/day            cum burn            cum pool
+  ...
+horizon totals
+  total burned   87412500.000000 $PAGE
+  pool accrued   37462500.000000 $PAGE
+```
+
+The `sim` profile uses defaults from `TOKENOMICS.md`: a small daily deploy share,
+a catch-heavy mix, occasional gym runs, and rare force evolves. It assumes a flat
+active count with no growth curve, so treat the output as a sink-rate estimate,
+not a price forecast. SOL-denominated buyback capacity depends on the live floor,
+which `pokeage pool` reports.
+
+## Notes
+
+Output formats `$PAGE` at 6 decimals and SOL at 9 decimals. PDAs and pubkeys
+print as base58. Missing accounts are reported as "not initialized" rather than
+treated as errors, so the read commands stay usable on a fresh cluster.
