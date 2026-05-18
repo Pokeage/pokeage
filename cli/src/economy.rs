@@ -100,3 +100,105 @@ pub fn fmt_sol(lamports: u64) -> String {
 /// number of each sink action an active user performs in one day.
 #[derive(Clone, Copy)]
 pub struct DailyProfile {
+    pub deploy_share: f64, // fraction of active users deploying that day
+    pub catches_common: u32,
+    pub catches_rare: u32,
+    pub catches_legendary: u32,
+    pub gym_runs: u32,
+    pub force_evolves_per_1000: u32, // rare, expressed per thousand active users
+}
+
+impl Default for DailyProfile {
+    /// baseline mix from the tokenomics doc: deploy is one-time so only a small
+    /// slice deploys each day, catching dominates volume, evolves are rare.
+    fn default() -> Self {
+        DailyProfile {
+            deploy_share: 0.05,
+            catches_common: 8,
+            catches_rare: 2,
+            catches_legendary: 0,
+            gym_runs: 1,
+            force_evolves_per_1000: 3,
+        }
+    }
+}
+
+/// one row of the projection, all token figures in base units.
+#[derive(Clone, Copy)]
+pub struct ProjectionDay {
+    pub day: u32,
+    pub daily_sink: u64,
+    pub daily_burn: u64,
+    pub daily_pool: u64,
+    pub cum_burn: u64,
+    pub cum_pool: u64,
+}
+
+/// full projection result.
+pub struct Projection {
+    pub days: u32,
+    pub daily_active: u64,
+    pub rows: Vec<ProjectionDay>,
+    pub total_sink: u64,
+    pub total_burn: u64,
+    pub total_pool: u64,
+}
+
+/// per-active-user daily sink in base units for a given profile.
+fn daily_sink_per_user(p: &DailyProfile) -> Result<u64, CliError> {
+    let mut sink: u64 = 0;
+
+    // amortized deploy: deploy_share of users pay the one-time deploy cost.
+    let deploy_units = (DEPLOY_COST as f64 * p.deploy_share).round() as u64;
+    sink = sink.checked_add(deploy_units).ok_or(CliError::Math("deploy add overflow"))?;
+
+    let common = CATCH_COMMON
+        .checked_mul(p.catches_common as u64)
+        .ok_or(CliError::Math("common catch overflow"))?;
+    let rare = CATCH_RARE
+        .checked_mul(p.catches_rare as u64)
+        .ok_or(CliError::Math("rare catch overflow"))?;
+    let legendary = CATCH_LEGENDARY
+        .checked_mul(p.catches_legendary as u64)
+        .ok_or(CliError::Math("legendary catch overflow"))?;
+    let gym = GYM_COST
+        .checked_mul(p.gym_runs as u64)
+        .ok_or(CliError::Math("gym overflow"))?;
+
+    // force evolve is expressed per thousand users, so divide back out.
+    let evolve = FORCE_EVOLVE_COST
+        .checked_mul(p.force_evolves_per_1000 as u64)
+        .ok_or(CliError::Math("evolve overflow"))?
+        / 1000;
+
+    for part in [common, rare, legendary, gym, evolve] {
+        sink = sink.checked_add(part).ok_or(CliError::Math("sink add overflow"))?;
+    }
+    Ok(sink)
+}
+
+/// simulates daily burn and pool accrual over the horizon. flat active count,
+/// fixed profile, no growth curve. checked arithmetic throughout.
+pub fn project(days: u32, daily_active: u64, profile: DailyProfile) -> Result<Projection, CliError> {
+    if days == 0 {
+        return Err(CliError::Input("days must be at least 1"));
+    }
+
+    let per_user = daily_sink_per_user(&profile)?;
+    let daily_sink = per_user
+        .checked_mul(daily_active)
+        .ok_or(CliError::Math("daily sink overflow"))?;
+    let (daily_burn, daily_pool) = split_sink(daily_sink)?;
+
+    let mut rows = Vec::with_capacity(days as usize);
+    let mut cum_burn: u64 = 0;
+    let mut cum_pool: u64 = 0;
+
+    for day in 1..=days {
+        cum_burn = cum_burn.checked_add(daily_burn).ok_or(CliError::Math("cum burn overflow"))?;
+        cum_pool = cum_pool.checked_add(daily_pool).ok_or(CliError::Math("cum pool overflow"))?;
+        rows.push(ProjectionDay {
+            day,
+            daily_sink,
+            daily_burn,
+            daily_pool,
