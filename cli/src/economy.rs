@@ -202,3 +202,105 @@ pub fn project(days: u32, daily_active: u64, profile: DailyProfile) -> Result<Pr
             daily_sink,
             daily_burn,
             daily_pool,
+            cum_burn,
+            cum_pool,
+        });
+    }
+
+    let total_sink = daily_sink
+        .checked_mul(days as u64)
+        .ok_or(CliError::Math("total sink overflow"))?;
+
+    Ok(Projection {
+        days,
+        daily_active,
+        rows,
+        total_sink,
+        total_burn: cum_burn,
+        total_pool: cum_pool,
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn page_scale_matches_program() {
+        assert_eq!(pokeage(1), 1_000_000);
+        assert_eq!(DEPLOY_COST, 1_000_000_000);
+        assert_eq!(FORCE_EVOLVE_COST, 75_000_000_000);
+    }
+
+    #[test]
+    fn split_sink_is_lossless_70_30() {
+        let (burn, pool) = split_sink(DEPLOY_COST).unwrap();
+        assert_eq!(burn, 700_000_000);
+        assert_eq!(pool, 300_000_000);
+        assert_eq!(burn + pool, DEPLOY_COST);
+    }
+
+    #[test]
+    fn split_sink_handles_odd_remainder() {
+        let (burn, pool) = split_sink(7).unwrap();
+        // 7 * 7000 / 10000 = 4 (truncated), pool gets the remaining 3.
+        assert_eq!(burn, 4);
+        assert_eq!(pool, 3);
+        assert_eq!(burn + pool, 7);
+    }
+
+    #[test]
+    fn instant_sell_is_half_floor() {
+        assert_eq!(instant_sell_quote(2_000_000).unwrap(), 1_000_000);
+        assert_eq!(instant_sell_quote(0).unwrap(), 0);
+    }
+
+    #[test]
+    fn bps_of_stays_in_u128() {
+        let r = bps_of(u64::MAX, 100).unwrap();
+        assert_eq!(r, (u64::MAX as u128 * 100 / 10_000) as u64);
+    }
+
+    #[test]
+    fn mint_fee_table_is_monotonic() {
+        let mut prev = 0u64;
+        for fee in MINT_FEE_BY_TIER {
+            assert!(fee > prev);
+            prev = fee;
+        }
+    }
+
+    #[test]
+    fn fmt_helpers_pad_fraction() {
+        assert_eq!(fmt_page(1_500_000), "1.500000");
+        assert_eq!(fmt_page(7), "0.000007");
+        assert_eq!(fmt_sol(1_000_000_000), "1.000000000");
+        assert_eq!(fmt_sol(1), "0.000000001");
+    }
+
+    #[test]
+    fn projection_accumulates_and_splits() {
+        let p = project(30, 1_000, DailyProfile::default()).unwrap();
+        assert_eq!(p.rows.len(), 30);
+        let last = p.rows.last().unwrap();
+        // cumulative on the last day equals daily times days.
+        assert_eq!(last.cum_burn, last.daily_burn * 30);
+        assert_eq!(last.cum_pool, last.daily_pool * 30);
+        // burn plus pool equals the full sink each day.
+        assert_eq!(last.daily_burn + last.daily_pool, last.daily_sink);
+        assert_eq!(p.total_sink, last.daily_sink * 30);
+        assert_eq!(p.total_burn, last.cum_burn);
+    }
+
+    #[test]
+    fn projection_rejects_zero_days() {
+        assert!(project(0, 100, DailyProfile::default()).is_err());
+    }
+
+    #[test]
+    fn projection_scales_with_users() {
+        let one = project(1, 1, DailyProfile::default()).unwrap();
+        let many = project(1, 1_000, DailyProfile::default()).unwrap();
+        assert_eq!(many.total_sink, one.total_sink * 1_000);
+    }
+}
