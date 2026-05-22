@@ -78,3 +78,84 @@ impl Config {
 
 /// per-player progress. mirrors state::player::PlayerState.
 #[derive(BorshDeserialize)]
+pub struct PlayerState {
+    pub owner: RawKey,
+    pub agent_deployed: bool,
+    pub total_caught: u64,
+    pub gym_wins: u32,
+    pub badges: u16,
+    pub last_action: i64,
+    pub bump: u8,
+}
+
+impl PlayerState {
+    /// number of obtainable gym badges, mirror of BADGE_COUNT.
+    pub const BADGE_COUNT: u8 = 12;
+
+    /// true when badge i is owned. out-of-range index reads false.
+    pub fn has_badge(&self, i: u8) -> bool {
+        if i >= Self::BADGE_COUNT {
+            return false;
+        }
+        self.badges & (1u16 << i) != 0
+    }
+
+    /// count of owned badges across the 12-bit mask.
+    pub fn badge_count(&self) -> u32 {
+        (self.badges & 0x0FFF).count_ones()
+    }
+}
+
+/// buyback pool. mirrors state::pool::BuybackPool.
+#[derive(BorshDeserialize)]
+pub struct BuybackPool {
+    pub total_lamports: u64,
+    pub lifetime_in: u64,
+    pub lifetime_out: u64,
+    pub floor_price: u64,
+    pub instant_sell_enabled: bool,
+    pub bump: u8,
+}
+
+/// secondary-market listing. mirrors state::listing::Listing.
+#[derive(BorshDeserialize)]
+pub struct Listing {
+    pub seller: RawKey,
+    pub card_mint: RawKey,
+    pub price: u64,
+    pub tier: u8,
+    pub level: u8,
+    pub stage: u8,
+    pub created_at: i64,
+    pub active: bool,
+    pub bump: u8,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn raw_key_base58_roundtrip() {
+        let bytes = [7u8; 32];
+        let k = RawKey(bytes);
+        let s = k.to_base58();
+        let back = bs58::decode(&s).into_vec().unwrap();
+        assert_eq!(back, bytes.to_vec());
+    }
+
+    #[test]
+    fn zero_key_detected() {
+        assert!(RawKey([0u8; 32]).is_zero());
+        assert!(!RawKey([1u8; 32]).is_zero());
+    }
+
+    #[test]
+    fn config_decodes_from_borsh() {
+        // hand-pack a config body (no discriminator, rpc strips that)
+        let mut buf = Vec::new();
+        buf.extend_from_slice(&[1u8; 32]); // authority
+        buf.extend_from_slice(&[2u8; 32]); // page_mint
+        buf.extend_from_slice(&[3u8; 32]); // treasury
+        buf.extend_from_slice(&[4u8; 32]); // buyback_vault
+        buf.extend_from_slice(&7000u16.to_le_bytes());
