@@ -159,3 +159,84 @@ mod tests {
         buf.extend_from_slice(&[3u8; 32]); // treasury
         buf.extend_from_slice(&[4u8; 32]); // buyback_vault
         buf.extend_from_slice(&7000u16.to_le_bytes());
+        buf.extend_from_slice(&3000u16.to_le_bytes());
+        buf.extend_from_slice(&500u16.to_le_bytes());
+        buf.extend_from_slice(&5000u16.to_le_bytes());
+        buf.extend_from_slice(&1_000_000u64.to_le_bytes()); // listing_fee
+        buf.extend_from_slice(&123u64.to_le_bytes()); // total_burned
+        buf.extend_from_slice(&9u64.to_le_bytes()); // total_cards_minted
+        buf.push(Config::PAUSE_CATCH | Config::PAUSE_MARKET);
+        buf.push(254);
+
+        let cfg = Config::try_from_slice(&buf).unwrap();
+        assert_eq!(cfg.burn_bps, 7000);
+        assert_eq!(cfg.pool_bps, 3000);
+        assert_eq!(cfg.total_burned, 123);
+        assert_eq!(cfg.total_cards_minted, 9);
+        assert_eq!(cfg.bump, 254);
+        assert_eq!(cfg.page_mint.0, [2u8; 32]);
+        assert!(cfg.is_paused(Config::PAUSE_CATCH));
+        assert!(cfg.is_paused(Config::PAUSE_MARKET));
+        assert!(!cfg.is_paused(Config::PAUSE_MINT));
+        assert_eq!(cfg.active_pauses(), vec!["catch", "market"]);
+    }
+
+    #[test]
+    fn player_badge_mask_reads() {
+        let mut buf = Vec::new();
+        buf.extend_from_slice(&[9u8; 32]); // owner
+        buf.push(1); // agent_deployed = true
+        buf.extend_from_slice(&42u64.to_le_bytes()); // total_caught
+        buf.extend_from_slice(&8u32.to_le_bytes()); // gym_wins
+        buf.extend_from_slice(&((1u16 << 0) | (1u16 << 11)).to_le_bytes()); // badges
+        buf.extend_from_slice(&1_700_000_000i64.to_le_bytes()); // last_action
+        buf.push(255);
+
+        let p = PlayerState::try_from_slice(&buf).unwrap();
+        assert!(p.agent_deployed);
+        assert_eq!(p.total_caught, 42);
+        assert_eq!(p.gym_wins, 8);
+        assert!(p.has_badge(0));
+        assert!(p.has_badge(11));
+        assert!(!p.has_badge(5));
+        assert_eq!(p.badge_count(), 2);
+    }
+
+    #[test]
+    fn pool_decodes_from_borsh() {
+        let mut buf = Vec::new();
+        buf.extend_from_slice(&5_000_000_000u64.to_le_bytes()); // total_lamports
+        buf.extend_from_slice(&9_000_000_000u64.to_le_bytes()); // lifetime_in
+        buf.extend_from_slice(&4_000_000_000u64.to_le_bytes()); // lifetime_out
+        buf.extend_from_slice(&2_000_000u64.to_le_bytes()); // floor_price
+        buf.push(1); // instant_sell_enabled
+        buf.push(250);
+
+        let pool = BuybackPool::try_from_slice(&buf).unwrap();
+        assert_eq!(pool.total_lamports, 5_000_000_000);
+        assert_eq!(pool.floor_price, 2_000_000);
+        assert!(pool.instant_sell_enabled);
+        assert_eq!(pool.bump, 250);
+    }
+
+    #[test]
+    fn listing_decodes_from_borsh() {
+        let mut buf = Vec::new();
+        buf.extend_from_slice(&[10u8; 32]); // seller
+        buf.extend_from_slice(&[11u8; 32]); // card_mint
+        buf.extend_from_slice(&500_000_000u64.to_le_bytes()); // price
+        buf.push(3); // tier
+        buf.push(40); // level
+        buf.push(2); // stage
+        buf.extend_from_slice(&1_700_500_000i64.to_le_bytes()); // created_at
+        buf.push(1); // active
+        buf.push(248);
+
+        let l = Listing::try_from_slice(&buf).unwrap();
+        assert_eq!(l.price, 500_000_000);
+        assert_eq!(l.tier, 3);
+        assert_eq!(l.level, 40);
+        assert!(l.active);
+        assert_eq!(l.card_mint.0, [11u8; 32]);
+    }
+}
