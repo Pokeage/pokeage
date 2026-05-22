@@ -61,3 +61,66 @@ pub fn try_fetch_and_decode<T: BorshDeserialize>(
 
 /// strips the 8-byte discriminator and borsh-decodes the remaining body. split
 /// out so it is unit-testable without a live rpc.
+pub fn decode_account<T: BorshDeserialize>(data: &[u8]) -> Result<T> {
+    if data.len() < DISCRIMINATOR_LEN {
+        return Err(CliError::ShortData {
+            have: data.len(),
+            need: DISCRIMINATOR_LEN,
+        }
+        .into());
+    }
+    let body = &data[DISCRIMINATOR_LEN..];
+    T::try_from_slice(body).map_err(|e| CliError::Decode(e.to_string()).into())
+}
+
+/// classifies a client error as a missing-account result. solana rpc returns a
+/// specific code for unknown accounts.
+fn is_account_not_found(e: &solana_client::client_error::ClientError) -> bool {
+    match e.kind() {
+        ClientErrorKind::RpcError(RpcError::ForUser(msg)) => {
+            let m = msg.to_lowercase();
+            m.contains("accountnotfound") || m.contains("not found")
+        }
+        _ => false,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::state::Config;
+
+    #[test]
+    fn decode_rejects_short_data() {
+        let data = [0u8; 4];
+        let r = decode_account::<Config>(&data);
+        assert!(r.is_err());
+        let err = r.err().unwrap();
+        let cli = err.downcast_ref::<CliError>().unwrap();
+        assert!(matches!(cli, CliError::ShortData { have: 4, need: 8 }));
+    }
+
+    #[test]
+    fn decode_strips_discriminator_then_reads_body() {
+        let mut data = Vec::new();
+        data.extend_from_slice(&[0xAA; DISCRIMINATOR_LEN]); // fake discriminator
+        data.extend_from_slice(&[1u8; 32]); // authority
+        data.extend_from_slice(&[2u8; 32]); // page_mint
+        data.extend_from_slice(&[3u8; 32]); // treasury
+        data.extend_from_slice(&[4u8; 32]); // buyback_vault
+        data.extend_from_slice(&7000u16.to_le_bytes());
+        data.extend_from_slice(&3000u16.to_le_bytes());
+        data.extend_from_slice(&500u16.to_le_bytes());
+        data.extend_from_slice(&5000u16.to_le_bytes());
+        data.extend_from_slice(&1_000_000u64.to_le_bytes());
+        data.extend_from_slice(&55u64.to_le_bytes());
+        data.extend_from_slice(&3u64.to_le_bytes());
+        data.push(0);
+        data.push(253);
+
+        let cfg = decode_account::<Config>(&data).unwrap();
+        assert_eq!(cfg.total_burned, 55);
+        assert_eq!(cfg.total_cards_minted, 3);
+        assert_eq!(cfg.bump, 253);
+    }
+}
