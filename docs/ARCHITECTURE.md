@@ -143,3 +143,76 @@ the value.
 graph LR
   player[player action] --> engine[engine resolves outcome]
   engine --> outcome{has on-chain cost?}
+  outcome -- no --> render[render / store result]
+  outcome -- yes --> sdk[SDK builds instruction]
+  sdk --> program[program charges + settles]
+  program --> burn[70% burn]
+  program --> pool[30% buyback pool]
+  program --> events[emit event]
+```
+
+The card claim gate ties the two together. A monster only becomes mintable once
+its `affection` reaches `AFFECTION_MAX` (100), checked by `canClaimCard` in
+[affection.ts](../src/affection.ts). Affection is earned through wins in the
+engine, so the right to mint a card is something the simulation grants, not
+something the chain hands out for free.
+
+## Determinism model
+
+The live game used `Math.random`, which made battles impossible to replay or
+test. The engine replaces that with [rng.ts](../src/rng.ts), a seedable
+mulberry32 generator. Properties that matter:
+
+- Same seed, same sequence. Two `Rng` instances built from the same seed produce
+  identical draws, so two runs with the same inputs produce identical outcomes.
+- Injectable. Every function that rolls dice (`calcDamage`, `attemptCatch`,
+  `generateWildMonster`, `simulateBattle`, the `Engine`) takes an `Rng`. Nothing
+  reads a global random source.
+- Snapshot and restore. `rng.snapshot()` and `rng.restore()` capture the 32-bit
+  state so a run can be saved mid-stream and resumed exactly.
+- String seeds. `rngFromString` hashes an arbitrary string (for example a wallet
+  address) into a seed, so a player's run can be deterministically tied to their
+  identity.
+
+Offline progression depends on this directly. `runOfflineCatchup` in
+[offline.ts](../src/offline.ts) computes how many 15-second ticks elapsed during
+an absence (capped at 24 hours) and replays exactly that many `engine.tick`
+calls. Because the engine is deterministic, the catch-up is reproducible and
+verifiable rather than a black-box reward.
+
+## Package relationships
+
+| package | language | role | depends on |
+| --- | --- | --- | --- |
+| engine (`src/`) | TypeScript | simulation, the original IP | nothing external at runtime |
+| program (`programs/pokeage/`) | Rust / Anchor | $PAGE economy, marketplace | anchor-lang, anchor-spl |
+| sdk (`sdk/`) | TypeScript | client-side PDAs, codec, token reads | @solana/web3.js |
+| cli (`cli/`) | Rust | read-only operator views, projections | solana-client, solana-sdk, borsh |
+
+The engine stands alone. It has no dependency on the program, the SDK, or
+Solana. You can run the full simulation with no chain in the loop.
+
+The SDK is the bridge from a host application to the program. It hardcodes the
+PDA seeds, instruction and account discriminators, and a minimal borsh codec,
+all matching the program. It deliberately does not hardcode the $PAGE mint, since
+the token is not launched yet; the mint is passed in at call time.
+
+The CLI is an operator tool that reads program state and runs economy
+projections off-chain. It mirrors the program's economy constants in
+[economy.rs](../cli/src/economy.rs) and the account layouts in
+[state.rs](../cli/src/state.rs) so it can decode accounts without linking the
+Anchor crate.
+
+The shared seam across all four is the economy constants. They are duplicated
+deliberately (TypeScript engine, Rust program, TypeScript SDK, Rust CLI) so each
+package builds independently, and they are kept in sync by hand. Each copy
+carries tests asserting the splits sum correctly and the mint-fee table is
+monotonic, so drift is caught in CI rather than at runtime.
+
+## Status
+
+The engine is implemented and self-contained. The program is pre-deployment:
+the program id is the Anchor placeholder, the $PAGE mint is not launched, and the
+code has not had an external audit. See [security.md](./security.md) for the
+honest limitations and [getting-started.md](./getting-started.md) to build and
+run each package.
