@@ -70,3 +70,76 @@ costs, same 70/30 split, same mint-fee table. The off-chain price model in
 [pricing.ts](../src/pricing.ts) produces estimates that match what the chain
 will charge, so a UI can quote a mint fee or an instant-sell payout before the
 user signs.
+
+## Module graph
+
+```mermaid
+graph TD
+  types[types.ts]
+  rng[rng.ts]
+  constants[constants.ts]
+  typechart[typechart.ts]
+  moves[moves.ts]
+  damage[damage.ts]
+  stats[stats.ts]
+  progression[progression.ts]
+  catch[catch.ts]
+  affection[affection.ts]
+  encounter[encounter.ts]
+  battle[battle.ts]
+  team[team.ts]
+  power[power.ts]
+  engine[engine.ts]
+  offline[offline.ts]
+  pricing[pricing.ts]
+
+  damage --> typechart
+  damage --> rng
+  damage --> constants
+  moves --> types
+  battle --> damage
+  battle --> moves
+  battle --> stats
+  stats --> constants
+  progression --> stats
+  encounter --> stats
+  encounter --> rng
+  team --> power
+  engine --> encounter
+  engine --> battle
+  engine --> catch
+  engine --> progression
+  engine --> team
+  engine --> affection
+  offline --> engine
+  pricing --> constants
+```
+
+`types.ts` and `constants.ts` are leaves that everything else depends on. The
+`engine.ts` tick orchestrator sits on top and pulls in encounter, battle, catch,
+progression, team, and affection. `offline.ts` is a thin wrapper that replays
+engine ticks. `pricing.ts` is independent of the simulation and depends only on
+the shared economy constants.
+
+## Data flow: action to settlement
+
+A single player action moves through three stages. The engine decides the
+outcome, the host turns the outcome into a transaction, and the program settles
+the value.
+
+1. The host calls `engine.tick()` (or a specific helper such as
+   `simulateBattle`). The engine draws from the injected `Rng`, resolves the
+   outcome, mutates the trainer, and returns a `TickResult`.
+2. If the outcome carries an on-chain cost (a catch attempt, a gym clear, a
+   force-evolve, a card mint or trade), the host builds the matching instruction
+   using the [SDK](../sdk/src/constants.ts): derive PDAs, encode args with the
+   borsh codec, attach the player's token accounts.
+3. The program charges the sink or fee, splits it, updates counters, and emits
+   an event. Token sinks burn 70 percent and route 30 percent to the buyback
+   pool. Card mint fees split 50/50 pool/treasury. Marketplace trades take a
+   5 percent fee split 60 pool / 40 burn-share.
+
+```mermaid
+graph LR
+  player[player action] --> engine[engine resolves outcome]
+  engine --> outcome{has on-chain cost?}
