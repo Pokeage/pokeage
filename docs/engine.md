@@ -113,3 +113,118 @@ defender's max HP for a neutral hit, 40 percent for super-effective).
 Stat scaling and instance creation. Owned instances interpolate base toward the
 Lv50 target linearly; `statAtLevel` is a GSC-style formula kept for ad-hoc
 combatants.
+
+| export | signature | description |
+| --- | --- | --- |
+| `statAtLevel` | `(base, level, isHP?): number` | GSC-style per-level stat |
+| `interpStat` | `(base, target, level): number` | linear base-to-target interpolation |
+| `targetStatsFor` | `(template): Stats` | Lv50 targets: stage2, else stage1, else base |
+| `statsAtLevel` | `(template, level): Stats` | full interpolated stat block |
+| `stageForLevel` | `(template, level): number` | evolution stage for a level (0, 1, 2) |
+| `createMonsterInstance` | `(template, level): MonsterInstance` | fresh, full-HP instance (interpolation model) |
+| `makeCombatant` | `(template, level): MonsterInstance` | quick combatant (GSC stat model) |
+
+Stat interpolation over the growth span (49 levels, base at level 1 to target at
+level 50):
+
+```
+t    = clamp((level - 1) / 49, 0, 1)
+stat = floor(base + (target - base) * t)
+```
+
+GSC-style per-level stat:
+
+```
+core = floor((2 * base * level) / 100)
+stat = isHP ? core + level + 10 : core + 5
+```
+
+## progression.ts
+
+XP, leveling, and evolution. The XP curve splits at level 10 into a steeper
+segment. Each level recomputes stats, heals the gained HP delta, and fires
+evolution at ev1/ev2. Legendaries (ev1/ev2 null) never evolve. The hard cap is
+`MAX_LEVEL` (55).
+
+| export | signature | description |
+| --- | --- | --- |
+| `getXpForLevel` | `(level): number` | XP to advance from level to level+1 |
+| `cumulativeXp` | `(level): number` | total XP to reach a level from 1 |
+| `grantXp` | `(mon, amount, template): ProgressEvent[]` | grant XP, level and evolve, mutates mon |
+| `rookieMultiplier` | `(level): number` | catch-up XP multiplier by lead level |
+| `wildXpReward` | `(leadLevel, wildLevel, buffMult?): number` | XP for a wild win |
+| `gymXpReward` | `(memberLevel, teamSize, buffMult?): number` | XP for a gym clear |
+| `ProgressEvent` | `{type:'levelup',level} \| {type:'evolve',stage}` | event union |
+
+XP curve:
+
+```
+level <= 10 : floor(50 * level ^ 1.5)
+level >  10 : floor(80 * level ^ 1.7)
+```
+
+Rookie multiplier: 4 under level 30, 2.5 under 45, 1.8 otherwise. Wild reward:
+
+```
+levelDiff = max(0.4, 1 - (leadLevel - wildLevel) * 0.02)
+reward    = max(12, floor((5 + wildLevel * 2.5) * levelDiff * rookie * buffMult))
+```
+
+Gym reward: `floor((15 + teamSize * 8) * rookie * buffMult)`.
+
+### Worked example: level-up
+
+A level 9 monster has 1300 XP banked and gains 200 more. `getXpForLevel(9) =
+floor(50 * 9^1.5) = floor(50 * 27) = 1350`. After the grant it holds 1500 XP,
+which clears the level 9 threshold (1350), so it advances to level 10, keeping
+150 XP. Stats are recomputed via `statsAtLevel` for level 10 and the HP gain is
+healed. If its `ev1` is 10 and it was at stage 0, a second event
+`{type: 'evolve', stage: 1}` fires in the same `grantXp` call.
+
+## power.ts
+
+Combat power (CP) scoring, used to compare teams and decide catch upgrades.
+
+| export | signature | description |
+| --- | --- | --- |
+| `getMonsterPower` | `(mon): number` | stat sum + level*3 + rarity bonus |
+| `getTrainerPower` | `(trainer): number` | sum of party CP |
+| `weakestOf` | `(mons): MonsterInstance \| null` | weakest by CP, or null when empty |
+
+Rarity bonus: common 0, rare 100, legendary 200. Level weight is 3 per level.
+
+## catch.ts
+
+Catch rate model. Base rate by rarity, reduced by level, clamped, scaled by a
+ball multiplier; at or above 999 the catch is guaranteed (master ball).
+
+| export | signature | description |
+| --- | --- | --- |
+| `catchRate` | `(wild, ballMult = 1): number` | effective catch probability |
+| `attemptCatch` | `(wild, ballMult?, rng?): CatchResult` | one throw, returns `{caught, ballsUsed, rate}` |
+
+```
+base    = CATCH_RATE[rarity]      // common 0.4, rare 0.08, legendary 0.015
+penalty = max(0, level * 0.005)
+rate    = clamp(base - penalty, 0.005, 0.9)
+ballMult >= 999 : rate = 1.0
+ballMult >  1   : rate = min(1.0, rate * ballMult)
+```
+
+## affection.ts
+
+Bond that gates the on-chain card claim. A monster gains affection on each win,
+scaled by foe toughness so farming weak mobs does not fast-track the bond. At
+`AFFECTION_MAX` (100) the card claim unlocks.
+
+| export | signature | description |
+| --- | --- | --- |
+| `affectionGainFor` | `(mon, foeLevel): number` | gain for beating a foe, clamped [0.1, 2.0] |
+| `addAffection` | `(mon, gain): boolean` | apply gain, returns true if it just hit max |
+| `canClaimCard` | `(mon): boolean` | true when affection >= 100 |
+
+```
+gain = clamp(0.5 * (foeLevel / myLevel), 0.1, 2.0)
+```
+
+## encounter.ts
