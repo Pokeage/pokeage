@@ -228,3 +228,118 @@ gain = clamp(0.5 * (foeLevel / myLevel), 0.1, 2.0)
 ```
 
 ## encounter.ts
+
+Wild encounter generation. Rolls the rare pool first (lower odds in legendary
+zones), then falls back to the common pool. Rares and legendaries spawn a few
+levels above the route band.
+
+| export | signature | description |
+| --- | --- | --- |
+| `generateWildMonster` | `(route, getTemplate, rng?, buffs?): MonsterInstance \| null` | roll a wild for a route |
+| `EncounterBuffs` | `interface {rare?, legend?}` | shop multipliers on the rare/legend roll |
+
+Rare-pool odds: 2 percent in a normal rare zone (`RARE_ZONE_CHANCE`), 0.8 percent
+when the pool holds a legendary (`LEGEND_ZONE_CHANCE`). Buffs multiply the
+respective roll. A rare spawns at `levelRange[1] + int(0, 4) + 3`; a common
+spawns at `int(levelRange[0], levelRange[1])`.
+
+## battle.ts
+
+Battle simulation. `simulateBattle` runs the full live model with a turn-by-turn
+event log; `simulateAuto` is the lightweight loop for offline catch-up;
+`simulateGym` chains a party against a leader team.
+
+| export | signature | description |
+| --- | --- | --- |
+| `simulateBattle` | `(me, foe, rng?): BattleResult` | full 1v1, event log, does not mutate inputs |
+| `simulateAuto` | `(party, wild, rng?): {won, hpRemaining, turnsUsed}` | lightweight 1v1 |
+| `simulateGym` | `(party, gymTeam, getTemplate, rng?): GymResult` | party vs leader, sequential KO, mutates party HP |
+| `GymResult` | `interface` | `{won, gymDefeated, partyFainted, results}` |
+
+Full battle rules: speed decides order (`spd >= foe.spd` goes first), accuracy is
+rolled per attack, STAB is 1.5, crit is 1/16 (`CRIT_CHANCE` 0.0625) at 1.5x, and
+a single per-hit cap is applied after every multiplier: 30 percent of the
+defender's max HP for a neutral hit, 40 percent for super-effective. The loop
+ends at a KO or the 24-turn cap (`BATTLE_TURN_CAP`); if neither side faints, the
+winner is whoever has the higher HP fraction. Status effects are recorded for
+replay but do not apply ongoing damage in this loop.
+
+## team.ts
+
+Party and box placement. A caught monster fills the party (size 4) first, then
+the box (size 6). When both are full it replaces the weakest member only if the
+newcomer has higher CP.
+
+| export | signature | description |
+| --- | --- | --- |
+| `placeNewMonster` | `(trainer, newMon): PlacementResult` | place a catch, release the weakest if full |
+| `shouldCatch` | `(trainer, wild): boolean` | catch decision: balls, duplicates, type slots, upgrade |
+| `PlacementResult` | `interface {placed, where, released?}` | placement outcome |
+
+`shouldCatch` refuses when balls are out, when the species is already owned, or
+when neither a type slot is open (max 2 of a type in party) nor the rare-priority
+override applies, unless the wild is a roster upgrade.
+
+## offline.ts
+
+Offline progression. Replays engine ticks for the time a player was away, capped
+at 24 hours. Deterministic: the same engine state and elapsed time always produce
+the same catch-up.
+
+| export | signature | description |
+| --- | --- | --- |
+| `runOfflineCatchup` | `(engine, elapsedMs): OfflineSummary` | replay ticks, mutate the trainer |
+| `formatOfflineSummary` | `(summary): string` | one-line "while you were away" report |
+| `OfflineSummary` | `interface` | `{ticks, durationMs, capped, battles, caught, levels, badges}` |
+
+Tick length is 15 seconds (`TICK_MS`). The number of ticks is
+`floor(min(elapsedMs, 24h) / 15000)`.
+
+## engine.ts
+
+The autonomous tick orchestrator. One tick decides between heal, gym, move, and
+hunt, mutates the trainer, and returns a `TickResult`. Made deterministic via an
+injected `Rng`.
+
+| export | signature | description |
+| --- | --- | --- |
+| `Engine` | `new Engine(trainer, world, getTemplate, opts?)` | tick orchestrator |
+| `Engine.tick` | `(): TickResult` | advance the run by one decision |
+| `Engine.healTeam` | `(): void` | restore all party HP |
+| `Engine.doGymChallenge` | `(town): boolean` | run a gym, award badge on win |
+| `Engine.doWildEncounter` | `(town, forced?): EncounterResult` | run a wild step |
+| `World` | `interface {towns, routes}` | world bundle |
+| `EngineOptions` | `interface {rng?, buffs?, xpBuff?}` | injectables and shop buffs |
+
+Decision order each tick: heal if the whole team fainted or the lead is under
+15 percent HP; else challenge the town gym if eligible (previous badge owned,
+lead level at or above the gym's max level); else move to the next town if its
+badge is owned and entry is unlocked; else hunt the town's route. A lost gym sets
+a 5-tick cooldown. A wild more than 2 levels above the lead is skipped
+(`FLEE_LEVEL_GAP`).
+
+## pricing.ts
+
+Card price model. Mirrors [tokenomics.md](./tokenomics.md): market price = tier
+base * level band * evolution stage. Mint fees and the instant-sell quote come
+from the same constants the program uses.
+
+| export | signature | description |
+| --- | --- | --- |
+| `levelMultiplier` | `(level): number` | level-band multiplier (1.0 to 10.0) |
+| `stageMultiplier` | `(stage): number` | stage multiplier 1.0 / 2.0 / 4.0 |
+| `cardPriceSol` | `(tier, level, stage): number` | estimated market price in SOL |
+| `mintFeeLamports` | `(tier): number` | NFT mint fee in lamports |
+| `instantSellQuote` | `(floorLamports): number` | floor * 50 percent payout |
+| `tierFromCode` / `tierToCode` | `(code) / (tier)` | tier name and on-chain code (0..5) |
+
+The stage multiplier only lifts rare and below; ultra and secret are
+scarcity-priced and ignore the stage factor. See
+[tokenomics.md](./tokenomics.md) for the full tier base table and level bands.
+
+## Sample data
+
+[data/monsters.ts](../src/data/monsters.ts) ships 30 original demo species plus
+3 legendaries, with a `createRegistry` helper. [data/world.ts](../src/data/world.ts)
+ships 12 towns (each with a gym) and 12 routes. The engine is data-driven: pass a
+different registry and world to run your own roster.
