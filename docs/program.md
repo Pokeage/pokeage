@@ -77,3 +77,82 @@ checks a single bit; `set_pause` overwrites the whole byte.
 
 Per-player progress. Badges are packed into a 12-bit mask.
 
+| field | type | meaning |
+| --- | --- | --- |
+| owner | Pubkey | the player wallet that owns this state |
+| agent_deployed | bool | gate for catch / gym / force-evolve |
+| total_caught | u64 | lifetime catch attempts charged |
+| gym_wins | u32 | lifetime gym clears charged |
+| badges | u16 | 12-bit badge mask |
+| last_action | i64 | unix timestamp of the last action |
+| bump | u8 | PDA bump |
+
+### Listing (per card)
+
+Secondary-market listing for a single card NFT held in escrow.
+
+| field | type | meaning |
+| --- | --- | --- |
+| seller | Pubkey | listing owner, receives net proceeds |
+| card_mint | Pubkey | the card NFT mint |
+| price | u64 | ask price in lamports |
+| tier | u8 | card tier code (0..5) |
+| level | u8 | card level, for indexing |
+| stage | u8 | evolution stage, for indexing |
+| created_at | i64 | unix timestamp |
+| active | bool | flipped false on cancel or buy |
+| bump | u8 | PDA bump |
+
+### BuybackPool (singleton)
+
+Funds instant-sell payouts and accumulates market fees.
+
+| field | type | meaning |
+| --- | --- | --- |
+| total_lamports | u64 | spendable balance backing payouts |
+| lifetime_in | u64 | lifetime inflow counter |
+| lifetime_out | u64 | lifetime payout counter |
+| floor_price | u64 | reference floor for instant sell |
+| instant_sell_enabled | bool | fail-closed gate, starts false |
+| bump | u8 | PDA bump |
+
+### CardMeta (per card)
+
+On-chain record for a minted card, mirroring tier/stage/level for indexing.
+
+| field | type | meaning |
+| --- | --- | --- |
+| mint | Pubkey | the card NFT mint |
+| owner | Pubkey | minter |
+| tier | u8 | tier code (0..5) |
+| stage | u8 | evolution stage |
+| level | u8 | card level |
+| minted_at | i64 | unix timestamp |
+| bump | u8 | PDA bump |
+
+## PDA seeds
+
+| account | seeds |
+| --- | --- |
+| Config | `"config"` |
+| BuybackPool | `"buyback_pool"` |
+| PlayerState | `"player"`, player pubkey |
+| Listing | `"listing"`, card mint pubkey |
+| CardMeta | `"card"`, card mint pubkey |
+| escrow ATA | associated token of the card mint under the Listing PDA |
+
+The SDK helpers in [pda.ts](../sdk/src/pda.ts) derive each of these and return
+`[address, bump]`.
+
+## Economy constants
+
+| name | value | note |
+| --- | --- | --- |
+| DECIMALS | 6 | $PAGE base units, pokeage(1) == 1000000 |
+| DEPLOY_COST | 1000 PAGE | one-time deploy sink |
+| CATCH_COMMON / RARE / LEGENDARY | 10 / 100 / 1000 PAGE | catch sinks by rarity code 0/1/2 |
+| GYM_COST | 50 PAGE | gym challenge sink |
+| FORCE_EVOLVE_COST | 75000 PAGE | steep force-evolve sink |
+| BURN_BPS / POOL_BPS | 7000 / 3000 | sink split, must sum to 10000 |
+| MARKET_FEE_BPS | 500 | 5 percent trade fee |
+| POOL_SHARE_BPS / BURN_SHARE_BPS | 6000 / 4000 | of the trade fee |
