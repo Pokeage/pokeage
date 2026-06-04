@@ -156,3 +156,83 @@ The SDK helpers in [pda.ts](../sdk/src/pda.ts) derive each of these and return
 | BURN_BPS / POOL_BPS | 7000 / 3000 | sink split, must sum to 10000 |
 | MARKET_FEE_BPS | 500 | 5 percent trade fee |
 | POOL_SHARE_BPS / BURN_SHARE_BPS | 6000 / 4000 | of the trade fee |
+| INSTANT_SELL_BPS | 5000 | floor * 50 percent payout |
+| LISTING_FEE_LAMPORTS | 1000000 | 0.001 SOL flat |
+| BPS_DENOM | 10000 | basis-point denominator |
+
+Mint fee per tier, lamports: common 1000000 (0.001 SOL), uncommon 3000000, rare
+10000000, holo 50000000, ultra 200000000, secret 1000000000 (1.0 SOL). All of
+this is duplicated in the SDK and CLI and asserted by unit tests in each package.
+See [tokenomics.md](./tokenomics.md) for the rationale.
+
+## Events
+
+Handlers emit events for indexers: `AgentDeployed`, `CatchAttempted`,
+`GymChallenged`, `Evolved`, `CardMinted`, `CardListed`, `ListingCancelled`,
+`CardSold`, `InstantSold`. Sink events carry both the burned and pool amounts so
+an indexer can reconstruct the split without re-deriving it. Source:
+[events.rs](../programs/pokeage/src/events.rs).
+
+## Security model
+
+### Checked math
+
+Every add, sub, mul, and div on a value that touches funds or counters uses
+`checked_*` and maps failure to `PokeageError::MathOverflow`. The shared `bps_of`
+helper computes `amount * bps / 10000` in `u128` space, then narrows back to
+`u64`, so a large amount times a basis-point factor cannot overflow before the
+division. The program aborts instead of wrapping.
+
+### CEI ordering
+
+Every handler mutates state before it moves tokens or lamports (checks, effects,
+interactions). `deploy_agent` sets `agent_deployed` before the burn;
+`catch_attempt` bumps `total_caught` before the sink; `buy_card` credits the pool
+and flips the listing inactive before any transfer; `instant_sell` debits the
+pool before paying out. A failed transfer cannot leave the program in a
+half-updated state.
+
+### Custom errors
+
+All failures use the `PokeageError` enum with fixed reason codes
+([errors.rs](../programs/pokeage/src/errors.rs)), never inline string requires, so
+client tooling can branch on stable codes. The set: AgentAlreadyDeployed,
+AgentNotDeployed, FeaturePaused, InvalidRarity, InvalidTier, InvalidBadgeIndex,
+ListingInactive, NotListingOwner, PoolInsufficient, InstantSellDisabled,
+FloorNotSet, MathOverflow, InvalidFeeConfig, Unauthorized, InsufficientFunds,
+InvalidPrice. Anchor codes start at 6000 in the IDL.
+
+### Access control
+
+Admin instructions (update_floor, set_instant_sell, withdraw_treasury, set_pause)
+use `has_one = authority` against the Config PDA, so only the configured
+authority can call them. Player instructions constrain the `player_state` PDA
+owner to the signer. Sink token accounts are constrained to the $PAGE mint and
+the player authority. Marketplace transfers out of escrow are signed by the
+Listing PDA, not the seller, so the program controls the escrowed card.
+
+### Fail-closed instant sell
+
+The pool buy path requires three gates, any unset gate blocks the payout:
+`instant_sell_enabled` is true, `floor_price > 0`, and `total_lamports >=
+payout`. The pool starts disabled at initialize. `update_floor` auto-disables
+instant sell when the pool cannot cover one payout at the new floor, and
+`set_instant_sell` refuses to enable without a floor. This means the pool can
+never promise a buyback it cannot fund and never bootstraps a payout from empty.
+
+### Bounded fees
+
+`initialize` requires `burn_bps + pool_bps == 10000` and caps `market_fee_bps`
+at 2000 (20 percent) to protect traders. The instant-sell share is fixed at
+50 percent. A trade fee that exceeds the price cannot occur because the fee is a
+fraction of the price and the seller net is `price - fee`.
+
+## Implementation note
+
+The instruction wiring in [lib.rs](../programs/pokeage/src/lib.rs) dispatches to
+each handler module. The handler functions in the instruction files are named
+with a `_handler` suffix (for example `catch_attempt_handler`), and the admin
+entry points are free functions in
+[admin.rs](../programs/pokeage/src/instructions/admin.rs). Confirm the dispatch
+names match the handler names before the first build; this is a pre-deployment
+codebase and the names are the kind of thing to verify with `anchor build`.
