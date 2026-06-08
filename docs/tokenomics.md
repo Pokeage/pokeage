@@ -118,3 +118,63 @@ Accrual sources:
 - 60 percent of every SOL marketplace trade fee.
 - the flat SOL listing fee on every new listing.
 
+Instant-sell formula. When a player instant-sells a card, the pool pays:
+
+```
+payout = floor_price * 50 percent   // INSTANT_SELL_BPS = 5000
+```
+
+The card moves into the vault, the pool's `total_lamports` is debited by the
+payout, and `lifetime_out` is incremented.
+
+Fail-closed safety. Instant sell only executes when all three hold:
+`instant_sell_enabled` is true, `floor_price > 0`, and the pool's
+`total_lamports >= payout`. The pool ships disabled at initialize.
+`update_floor` auto-disables instant sell whenever the pool cannot cover one
+payout at the new floor, and `set_instant_sell` refuses to enable without a
+floor. The pool can never promise a buyback it cannot fund.
+
+No seed capital. The pool is not pre-funded. It starts empty and grows only from
+real economic activity. Until it has accrued enough SOL to cover a payout at the
+set floor, instant sell stays closed. This avoids a treasury subsidy that could
+be drained, at the cost of instant sell being unavailable early on.
+
+## Phased rollout
+
+The economy is designed to come online in stages, gated by the authority's pause
+bitmask and the pool's accrual.
+
+1. Deploy and configure. Run `initialize`, set the authority, treasury, and
+   buyback vault. The pool starts disabled and the floor is unset.
+2. Sinks and minting. Enable deploy, catch, gym, force-evolve, and card minting.
+   $PAGE burns begin and the pool accrues its 30 percent share plus mint fees.
+   Instant sell stays closed.
+3. Marketplace. Enable peer-to-peer listings and buys once there is card supply.
+   Trade fees add to the pool and the burn-share.
+4. Instant sell. Once the pool has accrued enough SOL, the authority sets a floor
+   with `update_floor` and enables instant sell. The fail-closed gates keep it
+   safe to toggle.
+
+Each stage can be paused independently and instantly through `set_pause` during
+an incident.
+
+## Risk notes
+
+This is an honest accounting of where the design can go wrong.
+
+- Pre-deployment. The program id is a placeholder and the $PAGE mint is not
+  launched. Numbers here are the intended parameters, not live on-chain values.
+- No audit. The economy code has not had an external security review.
+- Floor is operator-set. `floor_price` is set by the authority, not by an
+  on-chain oracle. A mis-set floor over-pays or under-pays instant sells. The
+  fail-closed gates bound the downside (the pool cannot pay more than it holds)
+  but not a too-generous floor draining the pool fast at a sane balance.
+- Burn-share is deferred, not burned. The marketplace 40 percent burn-share
+  parks in treasury and depends on a manual buy-and-burn to actually remove
+  supply. Until that happens it is supply held by the treasury, not destroyed.
+- Sink demand is unproven. The deflation rate depends entirely on how much
+  players catch, gym, and force-evolve. The CLI projection in
+  [economy.rs](../cli/src/economy.rs) models this with a fixed daily profile and
+  a flat active-user count; it is a scenario tool, not a forecast.
+- Single authority. One key controls pauses, the floor, the instant-sell toggle,
+  and treasury withdrawals. That key is a single point of failure.
