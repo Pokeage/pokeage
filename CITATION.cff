@@ -1,0 +1,18 @@
+cff-version: 1.2.0
+title: pokeAge
+message: If you use this software, please cite it using these metadata.
+type: software
+authors:
+  - name: pokeAge core
+repository-code: "https://github.com/Pokeage/pokeage"
+abstract: >-
+  A deterministic, dependency-free monster-RPG simulation engine in TypeScript
+  with a planned on-chain $PAGE economy on Solana (Anchor).
+keywords:
+  - solana
+  - anchor
+  - game-engine
+  - monster-rpg
+  - token-2022
+license: MIT
+version: 0.4.1
