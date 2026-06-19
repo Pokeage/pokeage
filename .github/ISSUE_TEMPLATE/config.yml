@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Documentation
+    url: https://github.com/Pokeage/pokeage/tree/main/docs
+    about: Architecture, engine, program, and tokenomics references.
+  - name: Discussions
+    url: https://github.com/Pokeage/pokeage/discussions
+    about: Questions, ideas, and general help.
