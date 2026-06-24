@@ -62,3 +62,67 @@ flowchart LR
     PR[pokeage program] --> SK[token sinks 70/30]
     PR --> MK[marketplace 5%]
     PR --> BP[buyback pool]
+  end
+  SDK[sdk] --> PR
+  SDK --> P
+  CLI[cli] --> PR
+  E -. same constants .-> PR
+```
+
+A player action resolves in the engine (win a battle, evolve, reach the affection
+cap), then the matching on-chain instruction settles it: burn a sink, mint a
+card, list or buy on the market, or instant-sell into the pool. The engine takes
+a seeded RNG, so a given seed reproduces the exact same run, which is what makes
+the simulation testable.
+
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full picture.
+
+## Build
+
+Clone with submodules, then build each piece.
+
+```bash
+git clone --recurse-submodules https://github.com/Pokeage/pokeage.git
+cd pokeage
+
+# engine + sdk (typescript)
+npm install
+npm run build
+npm test
+
+# cli (rust)
+cargo build --release -p pokeage-cli
+
+# on-chain program (anchor + sbf toolchain)
+anchor build
+```
+
+## Quick start
+
+Run a deterministic playthrough from the engine:
+
+```ts
+import { Engine, newTrainer, sampleRegistry, WORLD, Rng } from '@pokeage/engine';
+
+const trainer = newTrainer('p1', 'ASH', sampleRegistry, { starterId: 4, balls: 30 });
+const engine = new Engine(trainer, WORLD, (id) => sampleRegistry.getMonsterById(id), {
+  rng: new Rng(2024),
+});
+
+for (let i = 0; i < 2000; i++) engine.tick();
+console.log(trainer.badges.length, trainer.totalCaught);
+// 12 8   (same seed always yields the same result)
+```
+
+Read on-chain state with the SDK:
+
+```ts
+import { PokeageClient } from '@pokeage/sdk';
+
+const client = PokeageClient.fromRpc('https://api.devnet.solana.com');
+const pool = await client.fetchPool();
+// { totalLamports, floorPrice, instantSellEnabled } or null
+```
+
+Inspect the economy from the CLI:
+
