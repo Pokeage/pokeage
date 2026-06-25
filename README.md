@@ -126,3 +126,68 @@ const pool = await client.fetchPool();
 
 Inspect the economy from the CLI:
 
+```bash
+pokeage config                 # program id, PDAs, economy constants
+pokeage sim --days 30 --users 1000   # project daily burn and pool accrual
+```
+
+## Project structure
+
+```
+src/                 deterministic engine (zero runtime deps)
+  typechart.ts       getTypeMultiplier, effectivenessLabel
+  damage.ts          calcDamage, calcDamageSimple
+  progression.ts     getXpForLevel, grantXp, wildXpReward
+  encounter.ts       generateWildMonster
+  battle.ts          simulateBattle, simulateAuto, simulateGym
+  catch.ts           catchRate, attemptCatch
+  engine.ts          Engine: tick orchestrator
+  pricing.ts         cardPriceSol, mintFeeLamports, instantSellQuote
+  data/              sample roster + 12-town world
+sdk/                 client: pda, accounts, token, instructions, client
+programs/pokeage/       anchor program
+  instructions/      initialize, deploy_agent, catch_attempt, gym_challenge,
+                     force_evolve, mint_card, list_card, cancel_listing,
+                     buy_card, instant_sell, update_floor, withdraw_treasury
+  state/             config, player, listing, pool, card
+  idl/pokeage.json      generated IDL
+cli/                 pokeage operator cli (clap)
+tests/               engine tests (deterministic)
+examples/            runnable scripts
+docs/                architecture, engine, program, tokenomics, security
+```
+
+## Economy at a glance
+
+| Sink | Cost ($PAGE) | Split |
+| --- | --- | --- |
+| Deploy agent | 1,000 | 70 burn / 30 pool |
+| Catch (common / rare / legendary) | 10 / 100 / 1,000 | 70 burn / 30 pool |
+| Gym challenge | 50 | 70 burn / 30 pool |
+| Force evolve | 75,000 | 70 burn / 30 pool |
+
+Marketplace charges a 5 percent trade fee (60 percent to the pool, 40 percent
+burned). NFT mint fees scale by tier from 0.001 to 1.0 SOL. Instant sell pays
+floor times 50 percent and is fail-closed when the pool is empty.
+See [docs/tokenomics.md](docs/tokenomics.md).
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md). Issues and pull requests use the
+templates in `.github/`. Security reports go through [SECURITY.md](SECURITY.md).
+
+## Status
+
+Early stage, single author, no external audit. The Anchor program is
+pre-deployment and its program id is a placeholder until launch. `$PAGE` is not
+live yet, so the SDK takes the mint as a parameter.
+
+## Links
+
+- GitHub: [Pokeage/pokeage](https://github.com/Pokeage/pokeage)
+- Docs: [docs/](docs/)
+- Ticker: `$PAGE`
+
+## License
+
+[MIT](LICENSE)
