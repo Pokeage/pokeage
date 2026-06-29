@@ -3,7 +3,7 @@
 All notable changes to this project are documented here. The format is based on
 Keep a Changelog, and this project adheres to semantic versioning.
 
-## [0.4.1] - 2026-06-22
+## [0.4.1] - 2026-06-28
 
 ### Fixed
 
@@ -12,7 +12,7 @@ Keep a Changelog, and this project adheres to semantic versioning.
 - Per-hit damage cap is applied once after STAB and crit so multipliers cannot
   exceed the cap.
 
-## [0.4.0] - 2026-05-18
+## [0.4.0] - 2026-05-26
 
 ### Added
 
@@ -25,7 +25,7 @@ Keep a Changelog, and this project adheres to semantic versioning.
 
 - Engine moved to an injected seedable `Rng` so runs are fully reproducible.
 
-## [0.3.0] - 2026-03-09
+## [0.3.0] - 2026-04-21
 
 ### Added
 
@@ -33,14 +33,14 @@ Keep a Changelog, and this project adheres to semantic versioning.
 - Card mint gating tied to the affection bond reaching its cap.
 - Offline progression catch-up, capped at 24 hours.
 
-## [0.2.0] - 2025-12-15
+## [0.2.0] - 2026-03-18
 
 ### Added
 
 - On-chain economy program scaffold: config, player state, token sinks.
 - Gym battle resolution and badge progression in the engine.
 
-## [0.1.0] - 2025-10-21
+## [0.1.0] - 2026-02-10
 
 ### Added
 
